@@ -151,7 +151,7 @@ describe('Category (e2e)', () => {
       expect(response.body.slug).toBe(createDto.slug);
 
       await prisma.category.delete({ where: { id: response.body.id } });
-      await prisma.user.delete({ where: { id: adminUser.id } });
+      await prisma.user.delete({ where: { id: adminUser.id } }).catch(() => {});
     });
 
     it('should reject creation without auth', async () => {
@@ -229,7 +229,7 @@ describe('Category (e2e)', () => {
       expect(response.body.name).toBe(updateDto.name);
       expect(response.body.description).toBe(updateDto.description);
 
-      await prisma.user.delete({ where: { id: adminUser.id } });
+      await prisma.user.delete({ where: { id: adminUser.id } }).catch(() => {});
     });
 
     it('should return 404 when updating non-existent category', async () => {
@@ -251,7 +251,7 @@ describe('Category (e2e)', () => {
         .send({ name: 'Test' })
         .expect(404);
 
-      await prisma.user.delete({ where: { id: adminUser.id } });
+      await prisma.user.delete({ where: { id: adminUser.id } }).catch(() => {});
     });
   });
 
@@ -289,7 +289,7 @@ describe('Category (e2e)', () => {
       const deleted = await prisma.category.findUnique({ where: { id: categoryToDelete } });
       expect(deleted?.deletedAt).toBeTruthy();
 
-      await prisma.user.delete({ where: { id: adminUser.id } });
+      await prisma.user.delete({ where: { id: adminUser.id } }).catch(() => {});
     });
   });
 });

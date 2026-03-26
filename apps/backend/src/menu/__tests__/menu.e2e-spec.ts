@@ -64,9 +64,10 @@ describe('Menu (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.menuItem.deleteMany({ where: { name: { contains: 'Test' } } });
-    await prisma.category.deleteMany({ where: { name: { contains: 'Test' } } });
-    await prisma.user.deleteMany({ where: { email: { contains: 'test' } } });
+    await prisma.cartItem.deleteMany({ where: { menuItem: { name: { contains: 'Test Item' } } } }).catch(() => {});
+    await prisma.menuItem.deleteMany({ where: { name: { contains: 'Test Item' } } }).catch(() => {});
+    await prisma.category.deleteMany({ where: { name: { contains: 'Test Category' } } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { email: { contains: 'test' } } }).catch(() => {});
     await app.close();
   });
 
