@@ -1,35 +1,33 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Leaf, Heart, WheatOff, Clock, Star, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Leaf, Heart, WheatOff, Clock, Star, ShoppingCart, Flame, ChefHat } from 'lucide-react';
 import { useMenuItem } from '@/hooks/useMenu';
+import { AddToCartButton } from '@/components/AddToCartButton';
+import { useCart } from '@/hooks/useCart';
 
 export default function MenuItemPage() {
   const params = useParams();
   const slug = params.slug as string;
   const { data: item, isLoading, error } = useMenuItem(slug);
+  const { data: cart } = useCart();
+  const cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-        <header className="bg-white border-b border-slate-200/50 sticky top-0 z-10 backdrop-blur-lg bg-white/80">
-          <div className="container mx-auto px-4 py-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-slate-600 hover:text-orange-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Menu</span>
-            </Link>
+      <main className="min-h-screen bg-slate-50">
+        <header className="bg-white shadow-sm sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="h-6 w-24 bg-slate-200 rounded animate-pulse" />
           </div>
         </header>
-        <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-80 rounded-2xl bg-slate-200 mb-8" />
-            <div className="h-8 w-64 bg-slate-200 rounded mb-4" />
-            <div className="h-4 w-96 bg-slate-200 rounded mb-6" />
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="animate-pulse space-y-6">
+            <div className="h-80 rounded-2xl bg-slate-200" />
+            <div className="h-10 w-3/4 bg-slate-200 rounded" />
+            <div className="h-6 w-full bg-slate-200 rounded" />
+            <div className="h-6 w-2/3 bg-slate-200 rounded" />
           </div>
         </div>
       </main>
@@ -38,9 +36,9 @@ export default function MenuItemPage() {
 
   if (error || !item) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-        <header className="bg-white border-b border-slate-200/50 sticky top-0 z-10 backdrop-blur-lg bg-white/80">
-          <div className="container mx-auto px-4 py-4">
+      <main className="min-h-screen bg-slate-50 flex flex-col">
+        <header className="bg-white shadow-sm sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-4 py-4">
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-slate-600 hover:text-orange-600 transition-colors"
@@ -50,103 +48,124 @@ export default function MenuItemPage() {
             </Link>
           </div>
         </header>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-4">Item Not Found</h1>
-          <p className="text-slate-500">The menu item you&apos;re looking for doesn&apos;t exist.</p>
+        <div className="flex-1 flex flex-col items-center justify-center py-16">
+          <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+            <ChefHat className="w-12 h-12 text-slate-300" />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">Item Not Found</h2>
+          <p className="text-slate-500 mb-6">The menu item you&apos;re looking for doesn&apos;t exist.</p>
+          <Link
+            href="/"
+            className="px-6 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors"
+          >
+            Browse Menu
+          </Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <header className="bg-white border-b border-slate-200/50 sticky top-0 z-10 backdrop-blur-lg bg-white/80">
-        <div className="container mx-auto px-4 py-4">
+    <main className="min-h-screen bg-slate-50">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-slate-600 hover:text-orange-600 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>Back to Menu</span>
+              <span className="font-medium">Back</span>
             </Link>
             <Link
               href="/cart"
               className="p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
             >
-              <span className="sr-only">Cart</span>
-              <ShoppingCart className="w-6 h-6 text-slate-600" />
-              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">
-                0
-              </div>
+              <ShoppingCart className="w-6 h-6 text-slate-700" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden bg-slate-100">
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+          <div className="relative h-72 sm:h-96">
             {item.imageUrl ? (
-              <Image
+              <img
                 src={item.imageUrl}
                 alt={item.name}
-                fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
-                priority
+                className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-6xl font-bold text-slate-300">{item.name.charAt(0)}</span>
+              <div className="w-full h-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                <span className="text-8xl font-bold text-orange-200">{item.name.charAt(0)}</span>
               </div>
             )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           </div>
 
-          <div>
-            <div className="flex items-start justify-between mb-4">
+          <div className="p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4 mb-4">
               <div>
-                <h1 className="text-4xl font-bold text-slate-900 mb-2">{item.name}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{item.name}</h1>
                 <div className="flex items-center gap-4 text-sm text-slate-500">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-amber-500 fill-current" />
-                    <span>4.5</span>
-                  </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <Clock className="w-4 h-4" />
                     <span>{item.preparationTime} min</span>
                   </div>
+                  <div className="flex items-center gap-1.5">
+                    <Flame className="w-4 h-4" />
+                    <span>{item.preparationTime * 5} cal</span>
+                  </div>
                 </div>
               </div>
-              <span className="text-4xl font-bold text-orange-600">₹{item.price}</span>
+              <div className="text-right">
+                <span className="text-3xl font-bold text-orange-600">₹{item.price}</span>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-6">
               {item.isVegetarian && (
-                <span className="inline-flex items-center gap-1 text-sm bg-green-100 text-green-700 px-3 py-1.5 rounded-full">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium bg-green-50 text-green-700 px-3 py-1.5 rounded-full">
                   <Leaf className="w-4 h-4" /> Vegetarian
                 </span>
               )}
               {item.isVegan && (
-                <span className="inline-flex items-center gap-1 text-sm bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full">
                   <Heart className="w-4 h-4" /> Vegan
                 </span>
               )}
               {item.isGlutenFree && (
-                <span className="inline-flex items-center gap-1 text-sm bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full">
                   <WheatOff className="w-4 h-4" /> Gluten-free
                 </span>
               )}
             </div>
 
             {item.description && (
-              <p className="text-slate-600 text-lg leading-relaxed mb-8">{item.description}</p>
+              <p className="text-slate-600 text-base leading-relaxed mb-8">
+                {item.description}
+              </p>
             )}
 
-            <div className="border-t border-slate-200 pt-6">
-              <button className="w-full py-4 px-6 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-lg rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all active:scale-95">
-                Add to Cart
-              </button>
+            {item.category && (
+              <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
+                <span className="px-3 py-1 bg-slate-100 rounded-full font-medium">
+                  {item.category.name}
+                </span>
+              </div>
+            )}
+
+            <div className="pt-6 border-t border-slate-100">
+              <AddToCartButton 
+                menuItem={item} 
+                className="w-full py-4 text-lg font-semibold rounded-xl" 
+              />
             </div>
           </div>
         </div>

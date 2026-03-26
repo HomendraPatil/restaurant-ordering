@@ -52,6 +52,35 @@ export class CartRepository {
     customizationPrice?: number;
     specialInstructions?: string;
   }) {
+    const whereClause = data.userId
+      ? { userId: data.userId, menuItemId: data.menuItemId }
+      : { sessionId: data.sessionId, menuItemId: data.menuItemId };
+
+    const existingItem = await this.prisma.cartItem.findFirst({
+      where: whereClause,
+    });
+
+    if (existingItem) {
+      return this.prisma.cartItem.update({
+        where: { id: existingItem.id },
+        data: {
+          quantity: existingItem.quantity + data.quantity,
+        },
+        include: {
+          menuItem: {
+            include: {
+              category: true,
+            },
+          },
+          customizations: {
+            include: {
+              option: true,
+            },
+          },
+        },
+      });
+    }
+
     return this.prisma.cartItem.create({
       data: {
         userId: data.userId,

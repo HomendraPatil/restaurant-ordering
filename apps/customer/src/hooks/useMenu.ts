@@ -65,7 +65,7 @@ export function useMenuItem(slug: string) {
   return useQuery<MenuItem>({
     queryKey: ['menuItem', slug],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE}/menu/${slug}`);
+      const response = await fetch(`${API_BASE}/menu/slug/${slug}`);
       if (!response.ok) {
         throw new Error('Failed to fetch menu item');
       }
