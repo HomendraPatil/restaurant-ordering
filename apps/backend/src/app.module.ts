@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { CategoryModule } from './category/category.module';
 import { MenuModule } from './menu/menu.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { MenuModule } from './menu/menu.module';
     UserModule,
     CategoryModule,
     MenuModule,
+    CartModule,
   ],
   providers: [
     {
