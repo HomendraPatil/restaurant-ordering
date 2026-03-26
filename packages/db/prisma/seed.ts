@@ -2,7 +2,6 @@ import { PrismaClient, Role, CustomizationType } from '@prisma/client';
 import { hash } from 'bcrypt';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -212,11 +211,6 @@ async function downloadAndUploadImage(imageUrl: string, key: string): Promise<st
       ACL: 'public-read',
     }));
 
-    const presignedUrl = await getSignedUrl(s3Client, new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: key,
-    }), { expiresIn: 365 * 24 * 60 * 60 });
-
     const baseUrl = `${process.env.S3_ENDPOINT || 'http://localhost:9000'}/${BUCKET_NAME}`;
     return `${baseUrl}/${key}`;
   } catch (error) {
@@ -239,7 +233,7 @@ async function main() {
   const adminPasswordHash = await hash('admin123', 12);
   const customerPasswordHash = await hash('customer123', 12);
 
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'admin@restaurant.com' },
     update: {},
     create: {

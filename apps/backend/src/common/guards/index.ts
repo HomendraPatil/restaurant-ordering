@@ -1,3 +1,3 @@
-export * from './jwt-auth.guard';
-export * from './roles.decorator';
-export * from './roles.guard';
+export * from '../../auth/guards/jwt-auth.guard';
+export * from '../../auth/guards/roles.decorator';
+export * from '../../auth/guards/roles.guard';
