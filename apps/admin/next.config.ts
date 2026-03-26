@@ -2,13 +2,6 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  experimental: {
-    turbo: {
-      resolveAlias: {
-        '@restaurant/types': '../../../packages/types/src',
-      },
-    },
-  },
   images: {
     remotePatterns: [
       {

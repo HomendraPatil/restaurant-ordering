@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = 'http://localhost:3000/api/v1';
 
 interface FetchOptions extends RequestInit {
   token?: string;
@@ -23,10 +23,15 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+    const url = `${this.baseUrl}${endpoint}`;
+    console.log('[API] Fetching:', url);
+
+    const response = await fetch(url, {
       ...fetchOptions,
       headers,
     });
+
+    console.log('[API] Response status:', response.status);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'An error occurred' }));
@@ -61,4 +66,5 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_URL);
+export const api = new ApiClient(API_URL);
+export { API_URL };

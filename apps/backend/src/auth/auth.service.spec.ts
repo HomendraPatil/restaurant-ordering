@@ -2,14 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { UserRepository } from '../common/repositories/user.repository';
 import { Role } from '@prisma/client';
 
+jest.mock('bcrypt');
+
 describe('AuthService', () => {
   let authService: AuthService;
   let userRepository: jest.Mocked<UserRepository>;
-  let jwtService: jest.Mocked<JwtService>;
 
   const mockUser = {
     id: 'user-uuid-123',
@@ -52,7 +54,9 @@ describe('AuthService', () => {
 
     authService = module.get<AuthService>(AuthService);
     userRepository = module.get(UserRepository);
-    jwtService = module.get(JwtService);
+
+    (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$12$hashedpassword');
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
   });
 
   describe('register', () => {
@@ -117,6 +121,7 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException if password is invalid', async () => {
       userRepository.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(
         authService.login({

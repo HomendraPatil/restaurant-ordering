@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { UserRepository } from '../common/repositories/user.repository';
 import { RegisterDto, LoginDto, AuthResponseDto, UserResponseDto } from './dto';
-import { Role } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -75,12 +75,12 @@ export class AuthService {
     };
   }
 
-  private mapUserToResponse(user: any): UserResponseDto {
+  private mapUserToResponse(user: User): UserResponseDto {
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      phone: user.phone,
+      phone: user.phone ?? undefined,
       role: user.role,
     };
   }

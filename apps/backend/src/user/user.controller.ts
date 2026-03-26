@@ -4,7 +4,6 @@ import { UserService } from './user.service';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards';
 import { Roles } from '../auth/guards/roles.decorator';
 import { Role } from '@prisma/client';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('users')
 @Controller('users')
@@ -22,7 +21,8 @@ export class UserController {
     @Query('limit') limit?: number,
     @Query('role') role?: string,
   ) {
-    return this.userService.findAll({ page, limit, role });
+    const roleEnum = role as Role | undefined;
+    return this.userService.findAll({ page, limit, role: roleEnum });
   }
 
   @Get(':id')

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import * as path from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -7,12 +8,13 @@ import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { CategoryModule } from './category/category.module';
+import { MenuModule } from './menu/menu.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
     }),
     ThrottlerModule.forRoot([
       {
@@ -34,6 +36,8 @@ import { UserModule } from './user/user.module';
     PrismaModule,
     AuthModule,
     UserModule,
+    CategoryModule,
+    MenuModule,
   ],
   providers: [
     {

@@ -40,9 +40,9 @@ export interface Category {
   slug: string;
   sortOrder: number;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
-  deletedAt?: Date;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 export interface MenuItem {
@@ -52,7 +52,7 @@ export interface MenuItem {
   name: string;
   description?: string;
   imageUrl?: string;
-  price: number;
+  price: number | string;
   preparationTime: number;
   isAvailable: boolean;
   isVegetarian: boolean;
@@ -60,9 +60,9 @@ export interface MenuItem {
   isGlutenFree: boolean;
   stockQuantity: number;
   isLimited: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt?: Date;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+  deletedAt?: Date | string | null;
   category?: Category;
 }
 

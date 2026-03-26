@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 @Injectable()
 export class UserRepository {
@@ -34,12 +34,12 @@ export class UserRepository {
   async findAll(params: {
     skip?: number;
     take?: number;
-    role?: string;
+    role?: Role;
   }) {
     const { skip = 0, take = 20, role } = params;
 
     return this.prisma.user.findMany({
-      where: role ? { role: role as any } : undefined,
+      where: role ? { role } : undefined,
       skip,
       take,
       orderBy: { createdAt: 'desc' },
@@ -55,10 +55,10 @@ export class UserRepository {
     });
   }
 
-  async count(params: { role?: string }) {
+  async count(params: { role?: Role }) {
     const { role } = params;
     return this.prisma.user.count({
-      where: role ? { role: role as any } : undefined,
+      where: role ? { role } : undefined,
     });
   }
 }
