@@ -4,7 +4,6 @@ import { UserService } from './user.service';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards';
 import { Roles } from '../auth/guards/roles.decorator';
 import { Role } from '@prisma/client';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('users')
 @Controller('users')

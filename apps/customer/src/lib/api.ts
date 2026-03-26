@@ -2,6 +2,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1
 
 interface FetchOptions extends RequestInit {
   token?: string;
+  revalidate?: number | false;
 }
 
 class ApiClient {
@@ -12,7 +13,7 @@ class ApiClient {
   }
 
   private async fetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
-    const { token, ...fetchOptions } = options;
+    const { token, revalidate, ...fetchOptions } = options;
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -26,6 +27,7 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...fetchOptions,
       headers,
+      next: revalidate !== undefined ? { revalidate } : undefined,
     });
 
     if (!response.ok) {
@@ -36,8 +38,8 @@ class ApiClient {
     return response.json();
   }
 
-  get<T>(endpoint: string, token?: string): Promise<T> {
-    return this.fetch<T>(endpoint, { method: 'GET', token });
+  get<T>(endpoint: string, token?: string, revalidate?: number | false): Promise<T> {
+    return this.fetch<T>(endpoint, { method: 'GET', token, revalidate });
   }
 
   post<T>(endpoint: string, data?: unknown, token?: string): Promise<T> {
@@ -61,4 +63,5 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_URL);
+export const api = new ApiClient(API_URL);
+export { API_URL };

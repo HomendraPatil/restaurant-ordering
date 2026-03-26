@@ -9,7 +9,6 @@ import { Role } from '@prisma/client';
 describe('AuthService', () => {
   let authService: AuthService;
   let userRepository: jest.Mocked<UserRepository>;
-  let jwtService: jest.Mocked<JwtService>;
 
   const mockUser = {
     id: 'user-uuid-123',
@@ -52,7 +51,6 @@ describe('AuthService', () => {
 
     authService = module.get<AuthService>(AuthService);
     userRepository = module.get(UserRepository);
-    jwtService = module.get(JwtService);
   });
 
   describe('register', () => {
