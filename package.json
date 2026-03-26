@@ -1,0 +1,36 @@
+{
+  "name": "restaurant-ordering",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:ci": "turbo test:ci",
+    "clean": "turbo clean && rm -rf node_modules",
+    "db:migrate": "pnpm --filter @restaurant/db migrate:dev",
+    "db:push": "pnpm --filter @restaurant/db db:push",
+    "db:seed": "pnpm --filter @restaurant/db seed",
+    "db:studio": "pnpm --filter @restaurant/db studio",
+    "db:generate": "pnpm --filter @restaurant/db generate",
+    "docker:up": "docker-compose -f docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.yml down"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "^19.0.0",
+      "@types/react-dom": "^19.0.0"
+    }
+  }
+}
