@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CategoryRepository } from './category.repository';
+import { CategoryRepository, CategoryPaginationParams } from './category.repository';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CategoryService {
   constructor(private categoryRepository: CategoryRepository) {}
 
-  async findAll() {
-    return this.categoryRepository.findAll();
+  async findAll(pagination?: CategoryPaginationParams) {
+    return this.categoryRepository.findAll(pagination);
   }
 
   async findById(id: string) {

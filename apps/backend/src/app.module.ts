@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import * as path from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -14,7 +15,6 @@ import { MenuModule } from './menu/menu.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
     }),
     ThrottlerModule.forRoot([
       {

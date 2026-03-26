@@ -1,6 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '../common/repositories/user.repository';
 import { UserResponseDto } from '../auth/dto';
+import { Role, User } from '@prisma/client';
+
+interface UserSummary {
+  id: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  role: Role;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 @Injectable()
 export class UserService {
@@ -19,7 +30,7 @@ export class UserService {
   async findAll(params: {
     page?: number;
     limit?: number;
-    role?: string;
+    role?: Role;
   }) {
     const page = params.page || 1;
     const limit = params.limit || 20;
@@ -31,7 +42,7 @@ export class UserService {
     ]);
 
     return {
-      items: users.map((u) => this.mapUserToResponse(u)),
+      items: users.map((u) => this.mapUserToResponse(u as UserSummary)),
       total,
       page,
       limit,
@@ -39,12 +50,12 @@ export class UserService {
     };
   }
 
-  private mapUserToResponse(user: any): UserResponseDto {
+  private mapUserToResponse(user: User | UserSummary): UserResponseDto {
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      phone: user.phone,
+      phone: user.phone ?? undefined,
       role: user.role,
     };
   }

@@ -21,7 +21,8 @@ export class UserController {
     @Query('limit') limit?: number,
     @Query('role') role?: string,
   ) {
-    return this.userService.findAll({ page, limit, role });
+    const roleEnum = role as Role | undefined;
+    return this.userService.findAll({ page, limit, role: roleEnum });
   }
 
   @Get(':id')

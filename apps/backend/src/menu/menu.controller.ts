@@ -4,7 +4,7 @@ import { MenuService } from './menu.service';
 import { Public } from '../common/decorators/public.decorator';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards';
 import { Roles } from '../auth/guards/roles.decorator';
-import { Role } from '@prisma/client';
+import { Role, Prisma } from '@prisma/client';
 
 @ApiTags('Menu')
 @Controller('menu')
@@ -21,7 +21,9 @@ export class MenuController {
   @ApiQuery({ name: 'isGlutenFree', required: false, type: Boolean })
   @ApiQuery({ name: 'minPrice', required: false, type: Number })
   @ApiQuery({ name: 'maxPrice', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'List of menu items' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 12)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of menu items' })
   async getAllMenuItems(
     @Query('categoryId') categoryId?: string,
     @Query('search') search?: string,
@@ -30,6 +32,8 @@ export class MenuController {
     @Query('isGlutenFree') isGlutenFree?: string,
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const filters = {
       categoryId,
@@ -40,7 +44,11 @@ export class MenuController {
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
     };
-    return this.menuService.findAll(filters);
+    const pagination = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 12,
+    };
+    return this.menuService.findAll(filters, pagination);
   }
 
   @Public()
@@ -67,8 +75,8 @@ export class MenuController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new menu item (admin only)' })
   @ApiResponse({ status: 201, description: 'Menu item created' })
-  async createMenuItem(@Body() data: Record<string, unknown>) {
-    return this.menuService.create(data as any);
+  async createMenuItem(@Body() data: Prisma.MenuItemCreateInput) {
+    return this.menuService.create(data);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -78,8 +86,8 @@ export class MenuController {
   @ApiOperation({ summary: 'Update a menu item (admin only)' })
   @ApiResponse({ status: 200, description: 'Menu item updated' })
   @ApiResponse({ status: 404, description: 'Menu item not found' })
-  async updateMenuItem(@Param('id') id: string, @Body() data: Record<string, unknown>) {
-    return this.menuService.update(id, data as any);
+  async updateMenuItem(@Param('id') id: string, @Body() data: Prisma.MenuItemUpdateInput) {
+    return this.menuService.update(id, data);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

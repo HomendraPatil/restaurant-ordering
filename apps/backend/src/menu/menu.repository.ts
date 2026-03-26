@@ -12,11 +12,16 @@ export interface MenuFilters {
   maxPrice?: number;
 }
 
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
 @Injectable()
 export class MenuRepository {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(filters?: MenuFilters) {
+  async findAll(filters?: MenuFilters, pagination?: PaginationParams) {
     const where: Prisma.MenuItemWhereInput = {
       isAvailable: true,
       deletedAt: null,
@@ -55,19 +60,36 @@ export class MenuRepository {
       }
     }
 
-    return this.prisma.menuItem.findMany({
-      where,
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 12;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      this.prisma.menuItem.findMany({
+        where,
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
           },
         },
-      },
-      orderBy: { name: 'asc' },
-    });
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.menuItem.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findById(id: string) {

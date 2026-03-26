@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Post, Body, Patch, Delete, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Param, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { CategoryService } from './category.service';
 import { Public } from '../common/decorators/public.decorator';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards';
@@ -14,9 +14,18 @@ export class CategoryController {
   @Public()
   @Get()
   @ApiOperation({ summary: 'Get all categories (public)' })
-  @ApiResponse({ status: 200, description: 'List of categories' })
-  async getAllCategories() {
-    return this.categoryService.findAll();
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiResponse({ status: 200, description: 'List of categories (paginated if page/limit provided)' })
+  async getAllCategories(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pagination = page || limit ? {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 12,
+    } : undefined;
+    return this.categoryService.findAll(pagination);
   }
 
   @Public()

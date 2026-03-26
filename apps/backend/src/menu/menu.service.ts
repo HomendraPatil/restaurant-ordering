@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { MenuRepository, MenuFilters } from './menu.repository';
+import { MenuRepository, MenuFilters, PaginationParams } from './menu.repository';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class MenuService {
   constructor(private menuRepository: MenuRepository) {}
 
-  async findAll(filters?: MenuFilters) {
-    return this.menuRepository.findAll(filters);
+  async findAll(filters?: MenuFilters, pagination?: PaginationParams) {
+    return this.menuRepository.findAll(filters, pagination);
   }
 
   async findById(id: string) {

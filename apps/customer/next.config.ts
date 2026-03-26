@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
+  reactCompiler: false,
   images: {
     remotePatterns: [
       {
@@ -15,9 +15,6 @@ const nextConfig: NextConfig = {
         hostname: 'images.unsplash.com',
       },
     ],
-  },
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.API_URL || 'http://localhost:3000',
   },
 };
 
