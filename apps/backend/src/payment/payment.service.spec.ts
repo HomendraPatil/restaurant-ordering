@@ -1,0 +1,125 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { PaymentService } from './payment.service';
+import { OrderRepository } from '../order/order.repository';
+import { PrismaService } from '../prisma/prisma.service';
+import * as crypto from 'crypto';
+
+describe('PaymentService', () => {
+  let paymentService: PaymentService;
+  let orderRepository: { addPayment: jest.Mock; findById: jest.Mock; updateStatus: jest.Mock };
+  let configService: { get: jest.Mock };
+
+  beforeEach(async () => {
+    orderRepository = {
+      addPayment: jest.fn(),
+      findById: jest.fn(),
+      updateStatus: jest.fn(),
+    };
+    
+    configService = {
+      get: jest.fn().mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          'RAZORPAY_KEY_ID': 'test_key_id',
+          'RAZORPAY_KEY_SECRET': 'test_key_secret',
+        };
+        return config[key];
+      }),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        PaymentService,
+        { provide: OrderRepository, useValue: orderRepository },
+        { provide: ConfigService, useValue: configService },
+      ],
+    }).compile();
+
+    paymentService = module.get<PaymentService>(PaymentService);
+  });
+
+  describe('createRazorpayOrder', () => {
+    it('should create Razorpay order with correct amount', async () => {
+      const mockRazorpayOrder = {
+        id: 'order_123',
+        amount: 10000, // in paise
+        currency: 'INR',
+        status: 'created',
+      };
+      
+      // Mock the Razorpay constructor
+      const MockRazorpay = jest.fn().mockImplementation(() => ({
+        orders: {
+          create: jest.fn().mockResolvedValue(mockRazorpayOrder),
+        },
+      }));
+      
+      // Replace the Razorpay import
+      (paymentService as any).razorpay = new MockRazorpay({
+        key_id: 'test_key_id',
+        key_secret: 'test_key_secret',
+      });
+
+      const result = await paymentService.createRazorpayOrder({
+        orderId: 'order-123',
+        amount: 10000, // ₹100 = 10000 paise
+        currency: 'INR',
+      });
+
+      expect(result.id).toBe('order_123');
+      expect(result.amount).toBe(10000);
+    });
+  });
+
+  describe('verifyPayment', () => {
+    it('should return true for valid signature', async () => {
+      // Compute the correct signature using the same secret
+      const body = 'order_123|pay_123';
+      const correctSignature = crypto
+        .createHmac('sha256', 'test_key_secret')
+        .update(body)
+        .digest('hex');
+
+      const result = await paymentService.verifyPayment({
+        razorpayOrderId: 'order_123',
+        razorpayPaymentId: 'pay_123',
+        razorpaySignature: correctSignature,
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false for invalid signature', async () => {
+      const result = await paymentService.verifyPayment({
+        razorpayOrderId: 'order_123',
+        razorpayPaymentId: 'pay_123',
+        razorpaySignature: 'invalid_signature',
+      });
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('recordPaymentSuccess', () => {
+    it('should record payment and update order status', async () => {
+      const mockOrder = {
+        id: 'order-123',
+        status: 'PENDING',
+        totalAmount: 100,
+      };
+      
+      orderRepository.findById.mockResolvedValue(mockOrder);
+      orderRepository.addPayment.mockResolvedValue({ id: 'payment-123' });
+      orderRepository.updateStatus.mockResolvedValue({ ...mockOrder, status: 'RECEIVED' });
+
+      const result = await paymentService.recordPaymentSuccess({
+        orderId: 'order-123',
+        razorpayPaymentId: 'pay_123',
+        amount: 100,
+      });
+
+      expect(orderRepository.addPayment).toHaveBeenCalledWith('order-123', 'pay_123', 100, 'SUCCESS');
+      expect(orderRepository.updateStatus).toHaveBeenCalledWith('order-123', 'RECEIVED');
+    });
+  });
+});

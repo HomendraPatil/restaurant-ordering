@@ -8,6 +8,6 @@ import { CartModule } from '../cart/cart.module';
   imports: [CartModule],
   controllers: [OrderController],
   providers: [OrderService, OrderRepository],
-  exports: [OrderService],
+  exports: [OrderService, OrderRepository],
 })
 export class OrderModule {}

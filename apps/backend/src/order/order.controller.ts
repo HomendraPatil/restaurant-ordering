@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, HttpCode, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { Request } from 'express';
 import { OrderService } from './order.service';
@@ -37,7 +37,7 @@ export class OrderController {
     const { items } = dto as { items: OrderItemDto[] };
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      throw new Error('Order must have at least one item');
+      throw new BadRequestException('Items array cannot be empty');
     }
 
     return this.orderService.createOrder({

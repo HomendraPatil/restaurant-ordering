@@ -43,8 +43,16 @@ describe('Category (e2e)', () => {
   });
 
   afterAll(async () => {
+    const testUsers = await prisma.user.findMany({ where: { email: { contains: 'test' } } });
+    const testUserIds = testUsers.map(u => u.id);
+    
+    await prisma.orderItem.deleteMany({ where: { order: { userId: { in: testUserIds } } } });
+    await prisma.order.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.cartItem.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.address.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.session.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
     await prisma.category.deleteMany({ where: { id: { in: testCategoryIds } } });
-    await prisma.user.deleteMany({ where: { email: { contains: 'test' } } });
     await app.close();
   });
 
