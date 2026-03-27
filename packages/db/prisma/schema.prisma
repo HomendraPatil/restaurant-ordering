@@ -192,16 +192,17 @@ model CartItemCustomization {
 }
 
 model Order {
-  id                String      @id @default(uuid())
-  userId            String      @map("user_id")
-  status            OrderStatus @default(RECEIVED)
-  subtotal          Decimal     @db.Decimal(10, 2)
-  taxAmount         Decimal     @map("tax_amount") @db.Decimal(10, 2)
-  totalAmount       Decimal     @map("total_amount") @db.Decimal(10, 2)
-  addressId         String      @map("address_id")
-  razorpayPaymentId String?     @unique @map("razorpay_payment_id")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
+  id                 String      @id @default(uuid())
+  userId             String      @map("user_id")
+  status             OrderStatus @default(RECEIVED)
+  subtotal           Decimal     @db.Decimal(10, 2)
+  taxAmount          Decimal     @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount        Decimal     @map("total_amount") @db.Decimal(10, 2)
+  addressId          String      @map("address_id")
+  razorpayPaymentId  String?     @unique @map("razorpay_payment_id")
+  specialInstructions String?    @map("special_instructions")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
 
   user          User                  @relation(fields: [userId], references: [id])
   address       Address               @relation(fields: [addressId], references: [id])

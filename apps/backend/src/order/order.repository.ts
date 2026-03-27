@@ -11,6 +11,7 @@ export class OrderRepository {
     subtotal: number;
     taxAmount: number;
     totalAmount: number;
+    specialInstructions?: string;
     items: Array<{
       menuItemId: string;
       quantity: number;
@@ -28,6 +29,7 @@ export class OrderRepository {
         taxAmount: data.taxAmount,
         totalAmount: data.totalAmount,
         status: 'PENDING',
+        specialInstructions: data.specialInstructions,
         items: {
           create: data.items.map((item) => ({
             menuItemId: item.menuItemId,

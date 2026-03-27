@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { OrderRepository } from '../order/order.repository';
+import { OrderGateway } from '../events/order.gateway';
 
 const Razorpay = require('razorpay');
 
@@ -30,6 +31,7 @@ export class PaymentService {
   constructor(
     private configService: ConfigService,
     private orderRepository: OrderRepository,
+    private orderGateway: OrderGateway,
   ) {
     this.razorpay = new Razorpay({
       key_id: this.configService.get<string>('RAZORPAY_KEY_ID') || '',
@@ -62,14 +64,25 @@ export class PaymentService {
   }
 
   async recordPaymentSuccess(params: RecordPaymentParams) {
+    let amount = params.amount;
+    let order = null;
+    
+    if (!amount || amount === 0) {
+      order = await this.orderRepository.findById(params.orderId);
+      amount = order ? Number(order.totalAmount) : 0;
+    }
+    
     await this.orderRepository.addPayment(
       params.orderId,
       params.razorpayPaymentId,
-      params.amount,
+      amount,
       'SUCCESS',
     );
 
     const updatedOrder = await this.orderRepository.updateStatus(params.orderId, 'RECEIVED');
+    
+    this.orderGateway.emitOrderStatusUpdate(params.orderId, 'RECEIVED', 'PENDING');
+    
     return updatedOrder;
   }
 

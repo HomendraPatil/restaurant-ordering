@@ -78,8 +78,11 @@ export class OrderService {
       subtotal: Math.round(subtotal * 100) / 100,
       taxAmount: Math.round(taxAmount * 100) / 100,
       totalAmount: Math.round(totalAmount * 100) / 100,
+      specialInstructions: data.specialInstructions,
       items: data.items,
     });
+
+    this.orderGateway.emitNewOrder(order);
 
     return order;
   }

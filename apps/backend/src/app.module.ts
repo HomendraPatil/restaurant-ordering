@@ -14,6 +14,7 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
 import { EventsModule } from './events/events.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { EventsModule } from './events/events.module';
     OrderModule,
     PaymentModule,
     EventsModule,
+    AdminModule,
   ],
   providers: [
     {
