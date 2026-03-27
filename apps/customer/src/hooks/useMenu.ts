@@ -7,14 +7,11 @@ export function useCategories() {
   return useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => {
-      console.log('[useCategories] Fetching categories...');
       const response = await fetch(`${API_BASE}/categories`);
       if (!response.ok) {
         throw new Error('Failed to fetch categories');
       }
-      const result = await response.json();
-      console.log('[useCategories] Got', result?.length, 'categories');
-      return result;
+      return response.json();
     },
     staleTime: 60 * 1000,
     retry: 1,
@@ -47,14 +44,11 @@ export function useMenuItems(filters?: MenuFilters) {
   return useQuery<MenuItem[]>({
     queryKey: ['menuItems', filters],
     queryFn: async () => {
-      console.log('[useMenuItems] Fetching menu items with filters:', filters);
       const response = await fetch(`${API_BASE}/menu${queryString ? `?${queryString}` : ''}`);
       if (!response.ok) {
         throw new Error('Failed to fetch menu items');
       }
-      const result = await response.json();
-      console.log('[useMenuItems] Got', result?.length, 'menu items');
-      return result;
+      return response.json();
     },
     staleTime: 60 * 1000,
     retry: 1,
@@ -65,7 +59,7 @@ export function useMenuItem(slug: string) {
   return useQuery<MenuItem>({
     queryKey: ['menuItem', slug],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE}/menu/${slug}`);
+      const response = await fetch(`${API_BASE}/menu/slug/${slug}`);
       if (!response.ok) {
         throw new Error('Failed to fetch menu item');
       }

@@ -6,6 +6,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Search, Leaf, Heart, WheatOff, Clock, Star, ShoppingCart, Loader2 } from 'lucide-react';
 import { CategoryList } from '@/components/CategoryList';
+import { CartDrawer } from '@/components/CartDrawer';
+import { useCart, useAddToCart } from '@/hooks/useCart';
+import { AddToCartButton } from '@/components/AddToCartButton';
+import { CustomizationModal } from '@/components/CustomizationModal';
 import type { MenuItem } from '@restaurant/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
@@ -184,76 +188,132 @@ function PriceRangeFilter({
   );
 }
 
-function MenuItemCard({ item }: { item: MenuItem }) {
-  return (
-    <Link
-      href={`/menu/${item.slug}`}
-      className="group relative overflow-hidden rounded-2xl bg-white border border-slate-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1"
-    >
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+function MenuItemCard({ item, onOpenCart }: { item: MenuItem; onOpenCart: () => void }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: cart } = useCart();
+  const addToCart = useAddToCart();
+  
+  const customizations = item.customizations as Array<{
+    id: string;
+    name: string;
+    type: 'SIZE' | 'ADDON' | 'TEXT';
+    isRequired: boolean;
+    options: Array<{ id: string; name: string; priceModifier: number }>;
+  }> | undefined;
+  const hasCustomizations = customizations && customizations.length > 0;
 
-      <div className="relative h-40 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-        {item.imageUrl ? (
-          <Image
-            src={item.imageUrl}
-            alt={item.name}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-            unoptimized
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="w-16 h-16 rounded-full bg-slate-300 flex items-center justify-center">
-              <span className="text-2xl font-bold text-slate-500">{item.name.charAt(0)}</span>
+  const cartItem = cart?.items.find(i => i.menuItemId === item.id);
+  const previousSelections = cartItem && cartItem.selectedOptions && cartItem.selectedOptions.length > 0
+    ? cartItem.selectedOptions.reduce((acc: Record<string, string[]>, opt: string) => {
+        const group = customizations?.find(g => g.options.some(o => o.id === opt));
+        if (group) {
+          if (!acc[group.id]) acc[group.id] = [];
+          acc[group.id].push(opt);
+        }
+        return acc;
+      }, {} as Record<string, string[]>)
+    : undefined;
+
+  const handleAddToCart = async (selectedOptions: Record<string, string[]>, customizationPrice: number, unitPrice: number) => {
+    try {
+      await addToCart.mutateAsync({
+        menuItemId: item.id,
+        quantity: 1,
+        unitPrice: unitPrice,
+        customizationPrice,
+        selectedOptions: Object.values(selectedOptions).flat(),
+      });
+      onOpenCart();
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
+  };
+
+  return (
+    <>
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
+        <Link href={`/menu/${item.slug}`}>
+          <div className="relative h-48 overflow-hidden">
+            {item.imageUrl ? (
+              <Image
+                src={item.imageUrl}
+                alt={item.name}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+                unoptimized
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-slate-300 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-slate-500">{item.name.charAt(0)}</span>
+                </div>
+              </div>
+            )}
+            <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm">
+              <Star className="w-4 h-4 text-amber-500 fill-current" aria-hidden="true" />
+              <span className="text-sm font-semibold text-slate-700">4.5</span>
             </div>
           </div>
-        )}
-        <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm">
-          <Star className="w-4 h-4 text-amber-500 fill-current" aria-hidden="true" />
-          <span className="text-sm font-semibold text-slate-700">4.5</span>
-        </div>
-      </div>
+        </Link>
 
-      <div className="p-5">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-bold text-lg text-slate-900 group-hover:text-orange-600 transition-colors">
-            {item.name}
-          </h3>
-        </div>
+        <div className="p-5">
+          <Link href={`/menu/${item.slug}`}>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-bold text-lg text-slate-900 group-hover:text-orange-600 transition-colors">
+                {item.name}
+              </h3>
+            </div>
 
-        {item.description && (
-          <p className="text-sm text-slate-500 mb-3 line-clamp-2">{item.description}</p>
-        )}
+            {item.description && (
+              <p className="text-sm text-slate-500 mb-3 line-clamp-2">{item.description}</p>
+            )}
 
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {item.isVegetarian && (
-            <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md">
-              <Leaf className="w-3 h-3" aria-hidden="true" /> Veg
-            </span>
-          )}
-          {item.isVegan && (
-            <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
-              <Heart className="w-3 h-3" aria-hidden="true" /> Vegan
-            </span>
-          )}
-          {item.isGlutenFree && (
-            <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-md">
-              <WheatOff className="w-3 h-3" aria-hidden="true" /> GF
-            </span>
-          )}
-        </div>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {item.isVegetarian && (
+                <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md">
+                  <Leaf className="w-3 h-3" aria-hidden="true" /> Veg
+                </span>
+              )}
+              {item.isVegan && (
+                <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
+                  <Heart className="w-3 h-3" aria-hidden="true" /> Vegan
+                </span>
+              )}
+              {item.isGlutenFree && (
+                <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-md">
+                  <WheatOff className="w-3 h-3" aria-hidden="true" /> GF
+                </span>
+              )}
+            </div>
+          </Link>
 
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-1 text-sm text-slate-500">
-            <Clock className="w-4 h-4" aria-hidden="true" />
-            <span>{item.preparationTime} min</span>
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-1 text-sm text-slate-500">
+              <Clock className="w-4 h-4" aria-hidden="true" />
+              <span>{item.preparationTime} min</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold text-slate-900">₹{item.price}</span>
+              <AddToCartButton 
+                menuItem={item} 
+                className="text-sm py-1.5 px-3"
+                onOpenModal={hasCustomizations ? () => setIsModalOpen(true) : undefined}
+              />
+            </div>
           </div>
-          <span className="text-xl font-bold text-slate-900">₹{item.price}</span>
         </div>
       </div>
-    </Link>
+
+      <CustomizationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        menuItem={item}
+        onAddToCart={handleAddToCart}
+        previousSelections={previousSelections}
+      />
+    </>
   );
 }
 
@@ -267,7 +327,7 @@ interface MenuItemFilters {
   maxPrice?: number;
 }
 
-function MenuItemList({ filters }: { filters: MenuItemFilters }) {
+function MenuItemList({ filters, onOpenCart }: { filters: MenuItemFilters; onOpenCart: () => void }) {
   const {
     data,
     error,
@@ -343,7 +403,7 @@ function MenuItemList({ filters }: { filters: MenuItemFilters }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {menuItems.map((item) => (
-          <MenuItemCard key={item.id} item={item} />
+          <MenuItemCard key={item.id} item={item} onOpenCart={onOpenCart} />
         ))}
       </div>
       
@@ -366,8 +426,10 @@ function MenuItemList({ filters }: { filters: MenuItemFilters }) {
 
 function SearchSection({
   selectedCategoryId,
+  onOpenCart,
 }: {
   selectedCategoryId?: string;
+  onOpenCart: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [dietaryFilters, setDietaryFilters] = useState<Record<string, boolean | undefined>>({});
@@ -402,13 +464,17 @@ function SearchSection({
         <PriceRangeFilter filters={priceFilters} onChange={setPriceFilters} />
       </div>
 
-      <MenuItemList filters={filters} />
+      <MenuItemList filters={filters} onOpenCart={onOpenCart} />
     </section>
   );
 }
 
 export default function HomePage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { data: cartData } = useCart();
+
+  const cartItemCount = cartData?.items?.length ?? 0;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -419,16 +485,18 @@ export default function HomePage() {
               Savory
             </h1>
             <nav className="flex items-center gap-4">
-              <Link
-                href="/cart"
+              <button
+                onClick={() => setIsCartOpen(true)}
                 className="p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
               >
                 <span className="sr-only">Cart</span>
                 <ShoppingCart className="w-6 h-6 text-slate-600" />
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">
-                  0
-                </div>
-              </Link>
+                {cartItemCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">
+                    {cartItemCount}
+                  </div>
+                )}
+              </button>
             </nav>
           </div>
         </div>
@@ -450,9 +518,11 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-slate-900">Menu</h2>
           </div>
-          <SearchSection selectedCategoryId={selectedCategoryId} />
+          <SearchSection selectedCategoryId={selectedCategoryId} onOpenCart={() => setIsCartOpen(true)} />
         </section>
       </div>
+
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </main>
   );
 }

@@ -75,6 +75,14 @@ export class MenuRepository {
               slug: true,
             },
           },
+          customizations: {
+            include: {
+              options: {
+                orderBy: { sortOrder: 'asc' },
+              },
+            },
+            orderBy: { sortOrder: 'asc' },
+          },
         },
         orderBy: { name: 'asc' },
         skip,
