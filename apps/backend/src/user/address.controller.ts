@@ -1,22 +1,59 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
 import { Request } from 'express';
 import { AddressService } from './address.service';
 import { JwtAuthGuard } from '../auth/guards';
 
 class CreateAddressDto {
-  addressLine: string;
-  city: string;
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  addressLine!: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  city!: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   state?: string;
-  pincode: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  pincode!: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   isDefault?: boolean;
 }
 
 class UpdateAddressDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   addressLine?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   city?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   state?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   pincode?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   isDefault?: boolean;
 }
 

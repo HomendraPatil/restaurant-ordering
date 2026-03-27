@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Minus, Plus, MapPin, PlusCircle, ChevronRight } from 'lucide-react';
+import { Minus, Plus, MapPin, PlusCircle, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useCart, useRemoveFromCart, useUpdateCartItem, useClearCart } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 
 interface Address {
@@ -14,11 +16,6 @@ interface Address {
   state?: string;
   pincode: string;
   isDefault: boolean;
-}
-
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('access_token');
 }
 
 interface OrderItem {
@@ -33,6 +30,7 @@ interface OrderItem {
 export default function CheckoutPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isAuthenticated, login, register, logout } = useAuth();
 
   const { data: cart, isLoading: cartLoading } = useCart();
   const removeItem = useRemoveFromCart();
@@ -41,6 +39,7 @@ export default function CheckoutPage() {
 
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [newAddress, setNewAddress] = useState({
     addressLine: '',
     city: '',
@@ -48,27 +47,67 @@ export default function CheckoutPage() {
     pincode: '',
   });
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [showPriceConfirm, setShowPriceConfirm] = useState(false);
+  const [priceChanges, setPriceChanges] = useState<Array<{name: string; oldPrice: number; newPrice: number}>>([]);
 
-  const token = getToken();
+  // Fetch current menu prices for stale price detection
+  const { data: menuData } = useQuery<{items: Array<{id: string; name: string; price: string}>}>({
+    queryKey: ['menu-prices'],
+    queryFn: async () => {
+      const menuItemIds = cart?.items.map(item => item.menuItemId) || [];
+      if (menuItemIds.length === 0) return { items: [] };
+      // Fetch all items to get current prices
+      return api.get('/menu?limit=100');
+    },
+    enabled: !!cart?.items?.length,
+  });
+
+  // Check for price changes
+  const hasPriceChanges = useMemo(() => {
+    if (!cart?.items || !menuData?.items) return false;
+    const currentPrices = new Map(menuData.items.map(item => [item.id, Number(item.price)]));
+    
+    const changes: Array<{name: string; oldPrice: number; newPrice: number}> = [];
+    for (const item of cart.items) {
+      const currentPrice = currentPrices.get(item.menuItemId);
+      if (currentPrice !== undefined && currentPrice !== Number(item.unitPrice)) {
+        changes.push({
+          name: item.menuItem.name,
+          oldPrice: Number(item.unitPrice),
+          newPrice: currentPrice,
+        });
+      }
+    }
+    setPriceChanges(changes);
+    return changes.length > 0;
+  }, [cart?.items, menuData]);
 
   const { data: addresses, isLoading: addressesLoading } = useQuery<Address[]>({
     queryKey: ['addresses'],
     queryFn: async () => {
-      const _token = getToken();
+      const _token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       if (!_token) return [];
       return api.get('/user/addresses', _token);
     },
-    enabled: !!token,
   });
 
   const defaultAddress = addresses?.find((a) => a.isDefault) ?? addresses?.[0];
-  const initialAddressId = defaultAddress?.id ?? '';
-  const [selectedAddressId, setSelectedAddressId] = useState<string>(initialAddressId);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+
+  // Update selected address when addresses change
+  useEffect(() => {
+    if (defaultAddress?.id && !selectedAddressId) {
+      setSelectedAddressId(defaultAddress.id);
+    } else if (!defaultAddress?.id && addresses?.[0]?.id && !selectedAddressId) {
+      setSelectedAddressId(addresses[0].id);
+    }
+  }, [addresses, defaultAddress, selectedAddressId]);
 
   const createAddressMutation = useMutation({
     mutationFn: async (data: typeof newAddress): Promise<Address> => {
-      const token = getToken();
-      return api.post('/user/addresses', data, token ?? undefined) as Promise<Address>;
+      const _token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      if (!_token) throw new Error('Please login first');
+      return api.post('/user/addresses', data, _token) as Promise<Address>;
     },
     onSuccess: (newAddr: Address) => {
       queryClient.invalidateQueries({ queryKey: ['addresses'] });
@@ -76,12 +115,15 @@ export default function CheckoutPage() {
       setShowNewAddressForm(false);
       setNewAddress({ addressLine: '', city: '', state: '', pincode: '' });
     },
+    onError: (error: Error) => {
+      alert(error.message || 'Failed to save address');
+    },
   });
 
   const placeOrderMutation = useMutation({
     mutationFn: async () => {
-      const token = getToken();
-      if (!token) {
+      const _token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      if (!_token) {
         throw new Error('Please login to place order');
       }
 
@@ -128,7 +170,7 @@ export default function CheckoutPage() {
           specialInstructions,
           items,
         },
-        token
+        _token
       );
     },
     onSuccess: () => {
@@ -156,14 +198,25 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
-    if (!token) {
-      router.push('/login?redirect=/checkout');
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
       return;
     }
     if (!selectedAddressId) {
       alert('Please select a delivery address');
       return;
     }
+    // Check for price changes and show confirmation
+    if (hasPriceChanges) {
+      setShowPriceConfirm(true);
+      return;
+    }
+    setIsPlacingOrder(true);
+    placeOrderMutation.mutate();
+  };
+
+  const handleConfirmPrice = () => {
+    setShowPriceConfirm(false);
     setIsPlacingOrder(true);
     placeOrderMutation.mutate();
   };
@@ -202,11 +255,11 @@ export default function CheckoutPage() {
               Delivery Address
             </h2>
 
-            {!token ? (
+            {!isAuthenticated ? (
               <div className="text-center py-4">
                 <p className="text-gray-600 mb-4">Please login to select delivery address</p>
                 <button
-                  onClick={() => router.push('/login?redirect=/checkout')}
+                  onClick={() => setShowAuthModal(true)}
                   className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                 >
                   Login
@@ -413,7 +466,7 @@ export default function CheckoutPage() {
 
           <button
             onClick={handlePlaceOrder}
-            disabled={isPlacingOrder || !token || !selectedAddressId}
+            disabled={isPlacingOrder || !isAuthenticated || !selectedAddressId}
             className="w-full py-4 bg-orange-500 text-white text-lg font-semibold rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isPlacingOrder ? (
@@ -426,6 +479,56 @@ export default function CheckoutPage() {
           </button>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        redirectTo="/checkout"
+      />
+
+      {/* Price Confirmation Modal */}
+      {showPriceConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowPriceConfirm(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-yellow-500" />
+              <h2 className="text-xl font-bold">Price Changes Detected</h2>
+            </div>
+            <p className="text-gray-600 mb-4">
+              The following items have changed in price since you added them to your cart:
+            </p>
+            <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
+              {priceChanges.map((change, idx) => (
+                <div key={idx} className="flex justify-between text-sm">
+                  <span>{change.name}</span>
+                  <span>
+                    <span className="line-through text-gray-400 mr-2">₹{change.oldPrice}</span>
+                    <span className="text-green-600 font-medium">₹{change.newPrice}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Your order total has been updated to reflect current prices.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPriceConfirm(false)}
+                className="flex-1 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPrice}
+                className="flex-1 py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600"
+              >
+                Confirm & Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
