@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { CreditCard, CheckCircle, XCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { Header } from '@/components/Header';
 
 interface OrderDetails {
   id: string;
@@ -46,7 +47,7 @@ function loadRazorpayScript(): Promise<void> {
   });
 }
 
-export default function PaymentPage() {
+function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
@@ -168,9 +169,17 @@ export default function PaymentPage() {
             Your order has been placed and payment is confirmed.
           </p>
           <div className="space-y-3">
+            {orderId && (
+              <button
+                onClick={() => router.push(`/order/${orderId}/tracking`)}
+                className="block w-full py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600"
+              >
+                Track Order
+              </button>
+            )}
             <button
               onClick={() => router.push('/')}
-              className="block w-full py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600"
+              className="block w-full py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
             >
               Continue Shopping
             </button>
@@ -203,6 +212,7 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Header />
       <div className="max-w-2xl mx-auto px-4 py-8">
         <button
           onClick={() => router.back()}
@@ -274,5 +284,17 @@ export default function PaymentPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    }>
+      <PaymentContent />
+    </Suspense>
   );
 }

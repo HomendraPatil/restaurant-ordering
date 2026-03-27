@@ -4,9 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Leaf, Heart, WheatOff, Clock, Star, ShoppingCart, Loader2, User, LogOut } from 'lucide-react';
+import { Search, Leaf, Heart, WheatOff, Clock, Star, Loader2 } from 'lucide-react';
 import { CategoryList } from '@/components/CategoryList';
 import { CartDrawer } from '@/components/CartDrawer';
+import { Header } from '@/components/Header';
 import { useCart, useAddToCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/AuthModal';
@@ -475,56 +476,10 @@ export default function HomePage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const { data: cartData } = useCart();
-  const { isAuthenticated, user, logout } = useAuth();
-
-  const cartItemCount = cartData?.items?.length ?? 0;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <header className="bg-white border-b border-slate-200/50 sticky top-0 z-10 backdrop-blur-lg bg-white/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-              Savory
-            </h1>
-            <nav className="flex items-center gap-2">
-              {isAuthenticated ? (
-                <>
-                  <span className="text-sm text-gray-600 hidden sm:inline">Hi, {user?.name}</span>
-                  <button
-                    onClick={logout}
-                    className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                    title="Logout"
-                  >
-                    <LogOut className="w-5 h-5 text-slate-600" />
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                  title="Login"
-                >
-                  <User className="w-5 h-5 text-slate-600" />
-                </button>
-              )}
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
-              >
-                <span className="sr-only">Cart</span>
-                <ShoppingCart className="w-6 h-6 text-slate-600" />
-                {cartItemCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">
-                    {cartItemCount}
-                  </div>
-                )}
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <div className="container mx-auto px-4 py-8">
         <section className="mb-12">
