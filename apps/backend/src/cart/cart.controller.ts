@@ -63,15 +63,16 @@ export class CartController {
     return this.cartService.removeItem(id);
   }
 
+  @Public()
   @UseGuards(JwtAuthGuard)
   @Delete()
   @ApiBearerAuth()
   @HttpCode(200)
   @ApiOperation({ summary: 'Clear cart' })
   @ApiResponse({ status: 200, description: 'Cart cleared' })
-  async clearCart(@Req() req: Request) {
+  async clearCart(@Headers('x-session-id') sessionId: string, @Req() req: Request) {
     const userId = (req as any).user?.id;
-    return this.cartService.clearCart(userId);
+    return this.cartService.clearCart(userId, sessionId);
   }
 
   @UseGuards(JwtAuthGuard)

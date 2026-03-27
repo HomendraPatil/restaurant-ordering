@@ -64,7 +64,12 @@ export class CartService {
   }
 
   async clearCart(userId?: string, sessionId?: string) {
-    return this.cartRepository.clearCart(userId, sessionId);
+    if (userId) {
+      return this.cartRepository.clearCart(userId, undefined);
+    } else if (sessionId) {
+      return this.cartRepository.clearCart(undefined, sessionId);
+    }
+    return { items: [], subtotal: 0, taxAmount: 0, total: 0 };
   }
 
   async mergeCart(userId: string, sessionId: string) {

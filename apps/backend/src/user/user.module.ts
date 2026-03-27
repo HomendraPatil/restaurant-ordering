@@ -6,8 +6,10 @@ import { AddressService } from './address.service';
 import { UserRepository } from '../common/repositories/user.repository';
 import { AddressRepository } from './address.repository';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
+  imports: [AuthModule],
   controllers: [UserController, AddressController],
   providers: [UserService, AddressService, UserRepository, AddressRepository, JwtAuthGuard, RolesGuard],
   exports: [UserService, AddressService],
