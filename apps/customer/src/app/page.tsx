@@ -4,10 +4,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Leaf, Heart, WheatOff, Clock, Star, ShoppingCart, Loader2 } from 'lucide-react';
+import { Search, Leaf, Heart, WheatOff, Clock, Star, ShoppingCart, Loader2, User, LogOut } from 'lucide-react';
 import { CategoryList } from '@/components/CategoryList';
 import { CartDrawer } from '@/components/CartDrawer';
 import { useCart, useAddToCart } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthModal } from '@/components/AuthModal';
 import { AddToCartButton } from '@/components/AddToCartButton';
 import { CustomizationModal } from '@/components/CustomizationModal';
 import type { MenuItem } from '@restaurant/types';
@@ -472,7 +474,9 @@ function SearchSection({
 export default function HomePage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const { data: cartData } = useCart();
+  const { isAuthenticated, user, logout } = useAuth();
 
   const cartItemCount = cartData?.items?.length ?? 0;
 
@@ -484,7 +488,27 @@ export default function HomePage() {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
               Savory
             </h1>
-            <nav className="flex items-center gap-4">
+            <nav className="flex items-center gap-2">
+              {isAuthenticated ? (
+                <>
+                  <span className="text-sm text-gray-600 hidden sm:inline">Hi, {user?.name}</span>
+                  <button
+                    onClick={logout}
+                    className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                    title="Logout"
+                  >
+                    <LogOut className="w-5 h-5 text-slate-600" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Login"
+                >
+                  <User className="w-5 h-5 text-slate-600" />
+                </button>
+              )}
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
@@ -523,6 +547,7 @@ export default function HomePage() {
       </div>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </main>
   );
 }

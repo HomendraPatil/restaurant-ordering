@@ -143,11 +143,19 @@ export function useClearCart() {
 
   return useMutation({
     mutationFn: async () => {
+      const sessionId = getSessionId();
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-session-id': sessionId,
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${API_BASE}/cart`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
       if (!response.ok) {
         throw new Error('Failed to clear cart');
