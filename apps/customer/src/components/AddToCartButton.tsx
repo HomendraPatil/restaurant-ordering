@@ -8,9 +8,19 @@ interface AddToCartButtonProps {
   menuItem: MenuItem;
   quantity?: number;
   className?: string;
+  selectedOptions?: Record<string, string[]>;
+  customizationPrice?: number;
+  onOpenModal?: () => void;
 }
 
-export function AddToCartButton({ menuItem, quantity = 1, className = '' }: AddToCartButtonProps) {
+export function AddToCartButton({ 
+  menuItem, 
+  quantity = 1, 
+  className = '', 
+  selectedOptions = {}, 
+  customizationPrice = 0,
+  onOpenModal
+}: AddToCartButtonProps) {
   const addToCart = useAddToCart();
   const updateCartItem = useUpdateCartItem();
   const removeFromCart = useRemoveFromCart();
@@ -22,16 +32,26 @@ export function AddToCartButton({ menuItem, quantity = 1, className = '' }: AddT
   const handleAddToCart = async () => {
     try {
       if (isInCart && cartItem) {
-        await updateCartItem.mutateAsync({
-          id: cartItem.id,
-          quantity: cartItem.quantity + quantity,
-        });
+        if (onOpenModal) {
+          onOpenModal();
+        } else {
+          await updateCartItem.mutateAsync({
+            id: cartItem.id,
+            quantity: cartItem.quantity + quantity,
+          });
+        }
       } else {
-        await addToCart.mutateAsync({
-          menuItemId: menuItem.id,
-          quantity,
-          unitPrice: Number(menuItem.price),
-        });
+        if (onOpenModal) {
+          onOpenModal();
+        } else {
+          await addToCart.mutateAsync({
+            menuItemId: menuItem.id,
+            quantity,
+            unitPrice: Number(menuItem.price),
+            customizationPrice,
+            selectedOptions: Object.values(selectedOptions).flat(),
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to add to cart:', error);
@@ -40,6 +60,10 @@ export function AddToCartButton({ menuItem, quantity = 1, className = '' }: AddT
 
   const handleIncrease = async () => {
     if (!cartItem) return;
+    if (onOpenModal) {
+      onOpenModal();
+      return;
+    }
     try {
       await updateCartItem.mutateAsync({
         id: cartItem.id,

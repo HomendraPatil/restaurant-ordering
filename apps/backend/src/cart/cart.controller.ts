@@ -42,6 +42,7 @@ export class CartController {
       unitPrice: dto.unitPrice,
       customizationPrice: dto.customizationPrice,
       specialInstructions: dto.specialInstructions,
+      selectedOptions: dto.selectedOptions,
     });
   }
 

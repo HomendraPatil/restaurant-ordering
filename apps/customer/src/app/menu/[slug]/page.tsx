@@ -1,18 +1,32 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Leaf, Heart, WheatOff, Clock, Star, ShoppingCart, Flame, ChefHat } from 'lucide-react';
 import { useMenuItem } from '@/hooks/useMenu';
 import { AddToCartButton } from '@/components/AddToCartButton';
+import { CustomizationSelector } from '@/components/CustomizationSelector';
 import { useCart } from '@/hooks/useCart';
+import type { MenuItem } from '@restaurant/types';
+import type { ItemCustomizationGroupWithOptions } from '@restaurant/types';
 
 export default function MenuItemPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const slug = (params?.slug as string) || '';
   const { data: item, isLoading, error } = useMenuItem(slug);
   const { data: cart } = useCart();
   const cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
+  const [totalPrice, setTotalPrice] = useState<number>(0);
+
+  const handleCustomizationChange = (options: Record<string, string[]>, price: number) => {
+    setSelectedOptions(options);
+    setTotalPrice(price);
+  };
+
+  const customizations = (item?.customizations as ItemCustomizationGroupWithOptions[]) || [];
 
   if (isLoading) {
     return (
@@ -125,7 +139,9 @@ export default function MenuItemPage() {
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-3xl font-bold text-orange-600">₹{item.price}</span>
+                <span className="text-3xl font-bold text-orange-600">
+                  {customizations.length > 0 && totalPrice > 0 ? `₹${totalPrice}` : `₹${item.price}`}
+                </span>
               </div>
             </div>
 
@@ -161,10 +177,22 @@ export default function MenuItemPage() {
               </div>
             )}
 
+            {customizations.length > 0 && (
+              <div className="mb-6 p-4 bg-slate-50 rounded-xl">
+                <CustomizationSelector
+                  menuItem={item as MenuItem}
+                  customizations={customizations}
+                  onCustomizationChange={handleCustomizationChange}
+                />
+              </div>
+            )}
+
             <div className="pt-6 border-t border-slate-100">
               <AddToCartButton 
-                menuItem={item} 
-                className="w-full py-4 text-lg font-semibold rounded-xl" 
+                menuItem={item as MenuItem} 
+                className="w-full py-4 text-lg font-semibold rounded-xl"
+                selectedOptions={selectedOptions}
+                customizationPrice={customizations.length > 0 ? totalPrice - Number(item.price) : 0}
               />
             </div>
           </div>

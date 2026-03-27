@@ -20,6 +20,7 @@ export enum PaymentStatus {
 export enum CustomizationType {
   SIZE = 'SIZE',
   ADDON = 'ADDON',
+  TEXT = 'TEXT',
 }
 
 export interface User {
@@ -64,6 +65,7 @@ export interface MenuItem {
   updatedAt?: Date | string;
   deletedAt?: Date | string | null;
   category?: Category;
+  customizations?: ItemCustomizationGroupWithOptions[];
 }
 
 export interface ItemCustomizationGroup {
@@ -75,6 +77,11 @@ export interface ItemCustomizationGroup {
   minSelections: number;
   maxSelections: number;
   sortOrder: number;
+}
+
+export interface ItemCustomizationGroupWithOptions extends Omit<ItemCustomizationGroup, 'type'> {
+  type: 'SIZE' | 'ADDON' | 'TEXT';
+  options: CustomizationOption[];
 }
 
 export interface CustomizationOption {
@@ -115,6 +122,7 @@ export interface CartItem {
   quantity: number;
   unitPrice: number;
   customizationPrice: number;
+  selectedOptions?: string[];
   specialInstructions?: string;
   createdAt: Date;
   updatedAt?: Date;

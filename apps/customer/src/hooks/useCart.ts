@@ -11,9 +11,14 @@ export interface CartItemWithDetails {
   quantity: number;
   unitPrice: string;
   customizationPrice: string;
+  selectedOptions?: string[];
   specialInstructions?: string;
   menuItem: MenuItem;
-  customizations: Array<{ option: { id: string; name: string; priceModifier: number } }>;
+  customizations: Array<{
+    id: string;
+    optionId: string;
+    option: { id: string; name: string; priceModifier: string };
+  }>;
 }
 
 export interface CartData {

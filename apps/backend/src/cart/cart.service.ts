@@ -47,6 +47,7 @@ export class CartService {
     unitPrice: number;
     customizationPrice?: number;
     specialInstructions?: string;
+    selectedOptions?: string[];
   }) {
     return this.cartRepository.addItem(data);
   }

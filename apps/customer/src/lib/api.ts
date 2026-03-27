@@ -24,14 +24,11 @@ class ApiClient {
     }
 
     const url = `${this.baseUrl}${endpoint}`;
-    console.log('[API] Fetching:', url);
 
     const response = await fetch(url, {
       ...fetchOptions,
       headers,
     });
-
-    console.log('[API] Response status:', response.status);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'An error occurred' }));

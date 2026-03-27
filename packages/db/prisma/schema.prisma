@@ -29,6 +29,7 @@ enum PaymentStatus {
 enum CustomizationType {
   SIZE
   ADDON
+  TEXT
 }
 
 model User {

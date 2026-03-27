@@ -1,9 +1,17 @@
-'use client';
+"use client";
 
-import { X, Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
-import { useCart, useUpdateCartItem, useRemoveFromCart } from '@/hooks/useCart';
-import type { CartItemWithDetails } from '@/hooks/useCart';
-import Link from 'next/link';
+import { useState, useMemo } from "react";
+import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import {
+  useCart,
+  useUpdateCartItem,
+  useRemoveFromCart,
+  useAddToCart,
+} from "@/hooks/useCart";
+import type { CartItemWithDetails } from "@/hooks/useCart";
+import { CustomizationModal } from "@/components/CustomizationModal";
+import Link from "next/link";
+import type { MenuItem } from "@restaurant/types";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -20,8 +28,29 @@ export function CartDrawer({ isOpen, onClose, cart }: CartDrawerProps) {
   const { data: fetchedCart, isLoading } = useCart();
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveFromCart();
+  const addToCart = useAddToCart();
 
   const displayCart = cart || fetchedCart;
+
+  const [editingItem, setEditingItem] = useState<{
+    menuItem: MenuItem;
+    cartItem: CartItemWithDetails;
+    customizations: Array<{
+      id: string;
+      name: string;
+      type: "SIZE" | "ADDON" | "TEXT";
+      isRequired: boolean;
+      minSelections: number;
+      maxSelections: number;
+      options: Array<{
+        id: string;
+        name: string;
+        priceModifier: number;
+        isDefault: boolean;
+      }>;
+    }>;
+    previousSelections: Record<string, string[]>;
+  } | null>(null);
 
   const handleUpdateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -30,6 +59,64 @@ export function CartDrawer({ isOpen, onClose, cart }: CartDrawerProps) {
 
   const handleRemoveItem = (id: string) => {
     removeItem.mutate(id);
+  };
+
+  const handleIncreaseWithCustomization = (item: CartItemWithDetails) => {
+    const customizations = item.menuItem.customizations as Array<{
+      id: string;
+      name: string;
+      type: 'SIZE' | 'ADDON' | 'TEXT';
+      isRequired: boolean;
+      minSelections: number;
+      maxSelections: number;
+      options: Array<{ id: string; name: string; priceModifier: number; isDefault: boolean }>;
+    }> | undefined;
+
+    if (!customizations || customizations.length === 0) {
+      handleUpdateQuantity(item.id, item.quantity + 1);
+      return;
+    }
+
+    const previousSelections: Record<string, string[]> = {};
+    
+    if (item.customizations && item.customizations.length > 0) {
+      item.customizations.forEach((cust) => {
+        const optId = cust.optionId;
+        const group = customizations.find(g => g.options.some(o => o.id === optId));
+        if (group) {
+          if (!previousSelections[group.id]) previousSelections[group.id] = [];
+          previousSelections[group.id].push(optId);
+        }
+      });
+    }
+
+    setEditingItem({
+      menuItem: item.menuItem as MenuItem,
+      cartItem: item,
+      customizations: customizations,
+      previousSelections,
+    });
+  };
+
+  const handleAddFromModal = async (
+    selectedOptions: Record<string, string[]>,
+    customizationPrice: number,
+    unitPrice: number
+  ) => {
+    if (!editingItem) return;
+
+    try {
+      await addToCart.mutateAsync({
+        menuItemId: editingItem.menuItem.id,
+        quantity: 1,
+        unitPrice: unitPrice,
+        customizationPrice,
+        selectedOptions: Object.values(selectedOptions).flat(),
+      });
+      setEditingItem(null);
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+    }
   };
 
   if (!isOpen) return null;
@@ -75,69 +162,101 @@ export function CartDrawer({ isOpen, onClose, cart }: CartDrawerProps) {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {displayCart.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex gap-3 bg-gray-50 rounded-lg p-3"
-                >
-                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
-                    {item.menuItem.imageUrl && (
-                      <img
-                        src={item.menuItem.imageUrl}
-                        alt={item.menuItem.name}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm truncate">
-                      {item.menuItem.name}
-                    </h3>
-                    {item.specialInstructions && (
-                      <p className="text-xs text-gray-500 truncate">
-                        Note: {item.specialInstructions}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2">
+              {displayCart.items.map((item) => {
+                const itemCustomizations = item.menuItem.customizations as Array<{
+                  id: string;
+                  name: string;
+                  type: "SIZE" | "ADDON" | "TEXT";
+                }>
+                | undefined;
+                const hasCustomizations =
+                  itemCustomizations && itemCustomizations.length > 0;
+
+                const itemTotal =
+                  (Number(item.unitPrice) + Number(item.customizationPrice)) *
+                  item.quantity;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="flex gap-3 bg-gray-50 rounded-lg p-3"
+                  >
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                      {item.menuItem.imageUrl && (
+                        <img
+                          src={item.menuItem.imageUrl}
+                          alt={item.menuItem.name}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm truncate">
+                        {item.menuItem.name}
+                      </h3>
+                      {item.specialInstructions && (
+                        <p className="text-xs text-gray-500 truncate">
+                          Note: {item.specialInstructions}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              handleUpdateQuantity(item.id, item.quantity - 1)
+                            }
+                            disabled={item.quantity <= 1}
+                            className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="font-medium w-6 text-center">
+                            {item.quantity}
+                          </span>
+                          {hasCustomizations ? (
+                            <button
+                              onClick={() =>
+                                handleIncreaseWithCustomization(item)
+                              }
+                              className="p-1 rounded-full hover:bg-gray-200"
+                              aria-label="Increase quantity with customization"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleUpdateQuantity(item.id, item.quantity + 1)
+                              }
+                              className="p-1 rounded-full hover:bg-gray-200"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                         <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                          className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="Decrease quantity"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded-full"
+                          aria-label="Remove item"
                         >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="font-medium w-6 text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                          className="p-1 rounded-full hover:bg-gray-200"
-                          aria-label="Increase quantity"
-                        >
-                          <Plus className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded-full"
-                        aria-label="Remove item"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">₹{itemTotal.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500">
+                        ₹{Number(item.unitPrice).toFixed(2)} each
+                        {Number(item.customizationPrice) > 0 && (
+                          <> + ₹{Number(item.customizationPrice).toFixed(2)}</>
+                        )}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold">
-                      ₹{((Number(item.unitPrice) + Number(item.customizationPrice)) * item.quantity).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      ₹{Number(item.unitPrice).toFixed(2)} each
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t p-4 space-y-3 bg-white">
@@ -166,6 +285,16 @@ export function CartDrawer({ isOpen, onClose, cart }: CartDrawerProps) {
           </>
         )}
       </div>
+
+      {editingItem && (
+        <CustomizationModal
+          isOpen={true}
+          onClose={() => setEditingItem(null)}
+          menuItem={editingItem.menuItem}
+          onAddToCart={handleAddFromModal}
+          previousSelections={editingItem.previousSelections}
+        />
+      )}
     </>
   );
 }

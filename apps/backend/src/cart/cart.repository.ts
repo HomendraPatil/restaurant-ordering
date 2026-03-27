@@ -12,6 +12,12 @@ export class CartRepository {
         menuItem: {
           include: {
             category: true,
+            customizations: {
+              include: {
+                options: true,
+              },
+              orderBy: { sortOrder: 'asc' },
+            },
           },
         },
         customizations: {
@@ -31,6 +37,12 @@ export class CartRepository {
         menuItem: {
           include: {
             category: true,
+            customizations: {
+              include: {
+                options: true,
+              },
+              orderBy: { sortOrder: 'asc' },
+            },
           },
         },
         customizations: {
@@ -51,6 +63,7 @@ export class CartRepository {
     unitPrice: number;
     customizationPrice?: number;
     specialInstructions?: string;
+    selectedOptions?: string[];
   }) {
     const whereClause = data.userId
       ? { userId: data.userId, menuItemId: data.menuItemId }
@@ -61,27 +74,83 @@ export class CartRepository {
     });
 
     if (existingItem) {
+      // Check if customizations are the same - if different, create new item
+      if (data.selectedOptions && data.selectedOptions.length > 0) {
+        const existingCustomizations = await this.prisma.cartItemCustomization.findMany({
+          where: { cartItemId: existingItem.id },
+          select: { optionId: true },
+        });
+        
+        const existingOptionIds = existingCustomizations.map(c => c.optionId).sort();
+        const newOptionIds = [...data.selectedOptions].sort();
+        
+        const hasSameCustomizations = JSON.stringify(existingOptionIds) === JSON.stringify(newOptionIds);
+        
+        if (!hasSameCustomizations) {
+          // Different customizations - create new cart item (don't merge)
+          const newItem = await this.prisma.cartItem.create({
+            data: {
+              userId: data.userId,
+              sessionId: data.sessionId,
+              menuItemId: data.menuItemId,
+              quantity: data.quantity,
+              unitPrice: data.unitPrice,
+              customizationPrice: data.customizationPrice || 0,
+              specialInstructions: data.specialInstructions,
+            },
+            include: {
+              menuItem: {
+                include: {
+                  category: true,
+                  customizations: {
+                    include: { options: true },
+                    orderBy: { sortOrder: 'asc' },
+                  },
+                },
+              },
+              customizations: {
+                include: { option: true },
+              },
+            },
+          });
+
+          if (data.selectedOptions?.length) {
+            for (const optionId of data.selectedOptions) {
+              await this.prisma.cartItemCustomization.create({
+                data: { cartItemId: newItem.id, optionId },
+              });
+            }
+          }
+
+          return newItem;
+        }
+      }
+
+      // Same customizations - merge them
       return this.prisma.cartItem.update({
         where: { id: existingItem.id },
         data: {
           quantity: existingItem.quantity + data.quantity,
+          customizationPrice: Number(existingItem.customizationPrice) + (data.customizationPrice || 0),
         },
         include: {
           menuItem: {
             include: {
               category: true,
+              customizations: {
+                include: { options: true },
+                orderBy: { sortOrder: 'asc' },
+              },
             },
           },
           customizations: {
-            include: {
-              option: true,
-            },
+            include: { option: true },
           },
         },
       });
     }
 
-    return this.prisma.cartItem.create({
+    const newItem = await this.prisma.cartItem.create({
       data: {
         userId: data.userId,
         sessionId: data.sessionId,
@@ -91,6 +160,39 @@ export class CartRepository {
         customizationPrice: data.customizationPrice || 0,
         specialInstructions: data.specialInstructions,
       },
+      include: {
+        menuItem: {
+          include: {
+            category: true,
+            customizations: {
+              include: {
+                options: true,
+              },
+              orderBy: { sortOrder: 'asc' },
+            },
+          },
+        },
+        customizations: {
+          include: {
+            option: true,
+          },
+        },
+      },
+    });
+
+    if (data.selectedOptions && data.selectedOptions.length > 0) {
+      for (const optionId of data.selectedOptions) {
+        await this.prisma.cartItemCustomization.create({
+          data: {
+            cartItemId: newItem.id,
+            optionId,
+          },
+        });
+      }
+    }
+
+    return this.prisma.cartItem.findUnique({
+      where: { id: newItem.id },
       include: {
         menuItem: {
           include: {
