@@ -17,7 +17,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import { adminApi, AdminOrder, OrdersResponse } from '@/lib/api';
-import { AdminLayout } from './AdminLayout';
+import { AdminLayout } from '@/app/AdminLayout';
 import { useAdminSocket } from '@/hooks/useAdminSocket';
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {

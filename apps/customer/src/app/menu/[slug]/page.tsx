@@ -18,6 +18,7 @@ export default function MenuItemPage() {
   const { data: item, isLoading, error } = useMenuItem(slug);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previousSelections, setPreviousSelections] = useState<Record<string, string[]>>({});
+  const [specialInstructions, setSpecialInstructions] = useState('');
   const addToCart = useAddToCart();
 
   const customizations = (item?.customizations as ItemCustomizationGroupWithOptions[]) || [];
@@ -31,8 +32,10 @@ export default function MenuItemPage() {
         unitPrice: Number(item!.price),
         customizationPrice: customPrice,
         selectedOptions: Object.values(selected).flat(),
+        specialInstructions: specialInstructions || undefined,
       });
       setIsModalOpen(false);
+      setSpecialInstructions('');
     } catch (error) {
       console.error('Failed to add to cart:', error);
     }
@@ -149,10 +152,24 @@ export default function MenuItemPage() {
             )}
 
             <div className="pt-6 border-t border-slate-100">
+              <div className="mb-4">
+                <label htmlFor="special-instructions" className="block text-sm font-medium text-slate-700 mb-1">
+                  Special Instructions (optional)
+                </label>
+                <textarea
+                  id="special-instructions"
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  placeholder="Any allergies or preferences?"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                  rows={2}
+                />
+              </div>
               <AddToCartButton 
                 menuItem={item as MenuItem} 
                 className="w-full py-4 text-lg font-semibold rounded-xl"
                 onOpenModal={hasCustomizations ? () => setIsModalOpen(true) : undefined}
+                onAddWithoutCustomization={() => handleAddToCart({}, 0)}
               />
             </div>
           </div>
