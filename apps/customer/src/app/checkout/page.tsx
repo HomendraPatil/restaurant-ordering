@@ -7,6 +7,7 @@ import { Minus, Plus, MapPin, PlusCircle, ChevronRight, AlertTriangle } from 'lu
 import { useCart, useRemoveFromCart, useUpdateCartItem, useClearCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/AuthModal';
+import { Header } from '@/components/Header';
 import { api } from '@/lib/api';
 
 interface Address {
@@ -245,6 +246,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Header />
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 

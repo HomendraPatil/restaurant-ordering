@@ -13,6 +13,7 @@ import { MenuModule } from './menu/menu.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { PaymentModule } from './payment/payment.module';
     CartModule,
     OrderModule,
     PaymentModule,
+    EventsModule,
   ],
   providers: [
     {

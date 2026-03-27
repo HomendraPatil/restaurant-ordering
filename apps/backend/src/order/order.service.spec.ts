@@ -4,11 +4,13 @@ import { OrderService } from './order.service';
 import { OrderRepository } from './order.repository';
 import { CartRepository } from '../cart/cart.repository';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrderGateway } from '../events/order.gateway';
 
 describe('OrderService', () => {
   let orderService: OrderService;
   let orderRepository: { create: jest.Mock; findById: jest.Mock; findByUserId: jest.Mock; updateStatus: jest.Mock; addPayment: jest.Mock };
   let prisma: { address: { findFirst: jest.Mock }; menuItem: { findUnique: jest.Mock } };
+  let orderGateway: { emitOrderStatusUpdate: jest.Mock };
 
   beforeEach(async () => {
     orderRepository = {
@@ -28,12 +30,17 @@ describe('OrderService', () => {
       },
     };
 
+    orderGateway = {
+      emitOrderStatusUpdate: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrderService,
         { provide: OrderRepository, useValue: orderRepository },
         { provide: CartRepository, useValue: {} },
         { provide: PrismaService, useValue: prisma },
+        { provide: OrderGateway, useValue: orderGateway },
       ],
     }).compile();
 
@@ -173,12 +180,14 @@ describe('OrderService', () => {
 
   describe('updateOrderStatus', () => {
     it('should update order status', async () => {
-      const mockOrder = { id: 'order-123', status: 'PREPARING' };
-      orderRepository.updateStatus.mockResolvedValue(mockOrder);
+      const mockOrder = { id: 'order-123', status: 'RECEIVED', items: [] };
+      orderRepository.findById.mockResolvedValue(mockOrder);
+      orderRepository.updateStatus.mockResolvedValue({ ...mockOrder, status: 'PREPARING' });
 
       const result = await orderService.updateOrderStatus('order-123', 'PREPARING');
 
-      expect(result).toEqual(mockOrder);
+      expect(result.status).toBe('PREPARING');
+      expect(orderGateway.emitOrderStatusUpdate).toHaveBeenCalled();
     });
   });
 });

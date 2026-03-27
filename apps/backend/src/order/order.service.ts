@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { OrderRepository } from './order.repository';
 import { CartRepository } from '../cart/cart.repository';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrderGateway } from '../events/order.gateway';
 
 export interface OrderItemData {
   menuItemId: string;
@@ -22,11 +23,13 @@ export interface CreateOrderData {
 @Injectable()
 export class OrderService {
   private readonly TAX_RATE = 0.18;
+  private readonly PREPARATION_TIME_PER_ITEM = 10; // minutes
 
   constructor(
     private orderRepository: OrderRepository,
     private cartRepository: CartRepository,
     private prisma: PrismaService,
+    private orderGateway: OrderGateway,
   ) {}
 
   async createOrder(data: CreateOrderData) {
@@ -90,7 +93,33 @@ export class OrderService {
   }
 
   async updateOrderStatus(id: string, status: string) {
-    return this.orderRepository.updateStatus(id, status);
+    const order = await this.orderRepository.findById(id);
+    if (!order) {
+      throw new BadRequestException('Order not found');
+    }
+
+    const previousStatus = order.status;
+    const updatedOrder = await this.orderRepository.updateStatus(id, status);
+
+    const estimatedTime = this.calculateEstimatedTime(updatedOrder);
+
+    this.orderGateway.emitOrderStatusUpdate(
+      id,
+      status,
+      previousStatus,
+      estimatedTime,
+    );
+
+    return updatedOrder;
+  }
+
+  private calculateEstimatedTime(order: any): number {
+    if (!order.items || order.items.length === 0) {
+      return this.PREPARATION_TIME_PER_ITEM;
+    }
+
+    const totalItems = order.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+    return Math.max(this.PREPARATION_TIME_PER_ITEM, totalItems * this.PREPARATION_TIME_PER_ITEM);
   }
 
   async recordPayment(orderId: string, razorpayPaymentId: string, amount: number, status: string) {
