@@ -10,7 +10,7 @@ describe('OrderService', () => {
   let orderService: OrderService;
   let orderRepository: { create: jest.Mock; findById: jest.Mock; findByUserId: jest.Mock; updateStatus: jest.Mock; addPayment: jest.Mock };
   let prisma: { address: { findFirst: jest.Mock }; menuItem: { findUnique: jest.Mock } };
-  let orderGateway: { emitOrderStatusUpdate: jest.Mock };
+  let orderGateway: { emitOrderStatusUpdate: jest.Mock; emitNewOrder: jest.Mock };
 
   beforeEach(async () => {
     orderRepository = {
@@ -32,6 +32,7 @@ describe('OrderService', () => {
 
     orderGateway = {
       emitOrderStatusUpdate: jest.fn(),
+      emitNewOrder: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

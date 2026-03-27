@@ -11,6 +11,7 @@ interface AddToCartButtonProps {
   selectedOptions?: Record<string, string[]>;
   customizationPrice?: number;
   onOpenModal?: () => void;
+  onAddWithoutCustomization?: () => void;
 }
 
 export function AddToCartButton({ 
@@ -19,7 +20,8 @@ export function AddToCartButton({
   className = '', 
   selectedOptions = {}, 
   customizationPrice = 0,
-  onOpenModal
+  onOpenModal,
+  onAddWithoutCustomization
 }: AddToCartButtonProps) {
   const addToCart = useAddToCart();
   const updateCartItem = useUpdateCartItem();
@@ -43,6 +45,8 @@ export function AddToCartButton({
       } else {
         if (onOpenModal) {
           onOpenModal();
+        } else if (onAddWithoutCustomization) {
+          onAddWithoutCustomization();
         } else {
           await addToCart.mutateAsync({
             menuItemId: menuItem.id,

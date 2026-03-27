@@ -153,6 +153,7 @@ export function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
                   onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   placeholder="John Doe"
+                  autoComplete="given-name"
                 />
               </div>
             </div>
@@ -167,6 +168,7 @@ export function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
                   onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   placeholder="your@email.com"
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -182,6 +184,7 @@ export function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
                   onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   placeholder="Min 6 characters"
+                  autoComplete="new-password"
                 />
               </div>
             </div>

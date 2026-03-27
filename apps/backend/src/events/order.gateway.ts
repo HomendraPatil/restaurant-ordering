@@ -59,6 +59,20 @@ export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { event: 'left', data: { orderId } };
   }
 
+  @SubscribeMessage('joinAdminRoom')
+  handleJoinAdminRoom(@ConnectedSocket() client: Socket) {
+    client.join('admin');
+    console.log(`Client ${client.id} joined admin room`);
+    return { event: 'joined', data: { room: 'admin' } };
+  }
+
+  @SubscribeMessage('leaveAdminRoom')
+  handleLeaveAdminRoom(@ConnectedSocket() client: Socket) {
+    client.leave('admin');
+    console.log(`Client ${client.id} left admin room`);
+    return { event: 'left', data: { room: 'admin' } };
+  }
+
   private leaveOrderRoom(client: Socket, orderId: string) {
     client.leave(`order:${orderId}`);
     this.connectedClients.get(client.id)?.delete(orderId);
@@ -80,7 +94,23 @@ export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
     
     this.server.to(`order:${orderId}`).emit('orderStatusUpdate', eventData);
+    this.server.to('admin').emit('orderStatusUpdate', eventData);
     console.log(`Emitted status update for order ${orderId}: ${status}`);
+  }
+
+  emitNewOrder(order: any) {
+    const eventData = {
+      id: order.id,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      userName: order.user?.name || 'Guest',
+      itemCount: order.items?.length || 0,
+      createdAt: order.createdAt,
+      timestamp: new Date().toISOString(),
+    };
+    
+    this.server.to('admin').emit('newOrder', eventData);
+    console.log(`Emitted new order: ${order.id}`);
   }
 
   getConnectedClientsCount(orderId: string): number {

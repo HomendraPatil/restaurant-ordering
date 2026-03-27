@@ -61,12 +61,21 @@ export class PaymentController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Verify payment signature' })
   @ApiResponse({ status: 200, description: 'Payment verified' })
-  async verifyPayment(@Body() dto: VerifyPaymentDto) {
+  async verifyPayment(@Body() dto: VerifyPaymentDto & { orderId?: string }) {
     const isValid = await this.paymentService.verifyPayment({
       razorpayOrderId: dto.razorpayOrderId,
       razorpayPaymentId: dto.razorpayPaymentId,
       razorpaySignature: dto.razorpaySignature,
     });
+
+    if (isValid && dto.orderId) {
+      await this.paymentService.recordPaymentSuccess({
+        orderId: dto.orderId,
+        razorpayPaymentId: dto.razorpayPaymentId,
+        amount: 0,
+      });
+    }
+
     return { valid: isValid };
   }
 

@@ -2,13 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { PaymentService } from './payment.service';
 import { OrderRepository } from '../order/order.repository';
-import { PrismaService } from '../prisma/prisma.service';
+import { OrderGateway } from '../events/order.gateway';
 import * as crypto from 'crypto';
 
 describe('PaymentService', () => {
   let paymentService: PaymentService;
   let orderRepository: { addPayment: jest.Mock; findById: jest.Mock; updateStatus: jest.Mock };
   let configService: { get: jest.Mock };
+  let orderGateway: { emitOrderStatusUpdate: jest.Mock };
 
   beforeEach(async () => {
     orderRepository = {
@@ -27,11 +28,16 @@ describe('PaymentService', () => {
       }),
     };
 
+    orderGateway = {
+      emitOrderStatusUpdate: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentService,
         { provide: OrderRepository, useValue: orderRepository },
         { provide: ConfigService, useValue: configService },
+        { provide: OrderGateway, useValue: orderGateway },
       ],
     }).compile();
 

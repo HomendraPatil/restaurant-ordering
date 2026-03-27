@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
 import { OrderModule } from '../order/order.module';
+import { EventsModule } from '../events/events.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [OrderModule, ConfigModule],
+  imports: [OrderModule, EventsModule, ConfigModule],
   controllers: [PaymentController],
   providers: [PaymentService],
 })
