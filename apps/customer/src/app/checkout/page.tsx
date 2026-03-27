@@ -120,8 +120,8 @@ export default function CheckoutPage() {
     },
   });
 
-  const placeOrderMutation = useMutation({
-    mutationFn: async () => {
+  const placeOrderMutation = useMutation<{ id: string }, Error, void>({
+    mutationFn: async (): Promise<{ id: string }> => {
       const _token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       if (!_token) {
         throw new Error('Please login to place order');
@@ -163,7 +163,7 @@ export default function CheckoutPage() {
         };
       }) || [];
 
-      return api.post(
+      return api.post<{ id: string }>(
         '/orders',
         {
           addressId: selectedAddressId,
@@ -173,9 +173,9 @@ export default function CheckoutPage() {
         _token
       );
     },
-    onSuccess: () => {
+    onSuccess: (order: { id: string }) => {
       clearCart.mutate();
-      router.push('/order-success');
+      router.push(`/payment?orderId=${order.id}`);
     },
     onError: (error) => {
       console.error('Failed to place order:', error);

@@ -13,11 +13,13 @@ enum Role {
 }
 
 enum OrderStatus {
+  PENDING
   RECEIVED
   PREPARING
   READY
   COMPLETED
   CANCELLED
+  PAYMENT_FAILED
 }
 
 enum PaymentStatus {
