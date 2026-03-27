@@ -9,7 +9,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
+    "test": "jest --runInBand --testTimeout=30000",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json"
@@ -31,6 +31,7 @@
     "helmet": "^8.0.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "razorpay": "^2.9.6",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -58,7 +59,7 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.57.2"
   },
-    "jest": {
+  "jest": {
     "moduleFileExtensions": [
       "js",
       "json",
@@ -76,6 +77,8 @@
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^@restaurant/types$": "<rootDir>/../../packages/types/src"
-    }
+    },
+    "maxWorkers": 1,
+    "runInBand": true
   }
 }

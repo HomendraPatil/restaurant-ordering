@@ -27,6 +27,17 @@ describe('Cart (e2e)', () => {
     prisma = app.get<PrismaService>(PrismaService);
     jwtService = app.get<JwtService>(JwtService);
 
+    // Aggressive cleanup - delete any existing test data first
+    const existingUser = await prisma.user.findFirst({ where: { email: 'cart-test-user@test.com' } });
+    if (existingUser) {
+      await prisma.orderItem.deleteMany({ where: { order: { userId: existingUser.id } } }).catch(() => {});
+      await prisma.order.deleteMany({ where: { userId: existingUser.id } }).catch(() => {});
+      await prisma.cartItem.deleteMany({ where: { userId: existingUser.id } }).catch(() => {});
+      await prisma.address.deleteMany({ where: { userId: existingUser.id } }).catch(() => {});
+      await prisma.session.deleteMany({ where: { userId: existingUser.id } }).catch(() => {});
+      await prisma.user.delete({ where: { id: existingUser.id } }).catch(() => {});
+    }
+
     await prisma.user.deleteMany({ where: { email: { contains: 'cart-test' } } }).catch(() => {});
     await prisma.cartItem.deleteMany({ where: { sessionId: { contains: 'test-session' } } }).catch(() => {});
     await prisma.cartItem.deleteMany({ where: { sessionId: { contains: 'totals-session' } } }).catch(() => {});
@@ -63,12 +74,21 @@ describe('Cart (e2e)', () => {
   });
 
   afterAll(async () => {
+    const testUsers = await prisma.user.findMany({ where: { email: { contains: 'cart-test' } } });
+    const testUserIds = testUsers.map(u => u.id);
+    
+    await prisma.orderItem.deleteMany({ where: { order: { userId: { in: testUserIds } } } }).catch(() => {});
+    await prisma.order.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+    await prisma.cartItem.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+    await prisma.address.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+    await prisma.session.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { id: { in: testUserIds } } }).catch(() => {});
+    
     await prisma.cartItem.deleteMany({ where: { sessionId: { contains: 'test-session' } } }).catch(() => {});
     await prisma.cartItem.deleteMany({ where: { sessionId: { contains: 'totals-session' } } }).catch(() => {});
     await prisma.cartItem.deleteMany({ where: { sessionId: { contains: 'add-session' } } }).catch(() => {});
     await prisma.cartItem.deleteMany({ where: { sessionId: { contains: 'merge-session' } } }).catch(() => {});
     await prisma.menuItem.deleteMany({ where: { name: { contains: 'Cart Test Item' } } }).catch(() => {});
-    await prisma.user.deleteMany({ where: { email: { contains: 'cart-test' } } }).catch(() => {});
     await app.close();
   });
 
@@ -180,6 +200,17 @@ describe('Cart (e2e)', () => {
     });
 
     it('should add item to cart for authenticated user', async () => {
+      // Aggressive cleanup - delete ALL cart items for this user first
+      await prisma.cartItem.deleteMany({ where: { userId: testUserId } });
+      // Also delete any session-based cart items with this menu item
+      const sessionPattern = `test-session|add-session|totals-session|merge-session`;
+      await prisma.cartItem.deleteMany({ 
+        where: { 
+          menuItemId: testMenuItemId,
+          sessionId: { not: null }
+        }
+      });
+      
       const token = jwtService.sign({ sub: testUserId, email: 'cart-test-user@test.com', role: 'CUSTOMER' });
 
       const response = await request(app.getHttpServer())
@@ -243,6 +274,9 @@ describe('Cart (e2e)', () => {
 
   describe('/api/v1/cart/merge (POST)', () => {
     it('should merge guest cart into user cart on login', async () => {
+      // Clean up user's existing cart first to ensure fresh state
+      await prisma.cartItem.deleteMany({ where: { userId: testUserId } }).catch(() => {});
+      
       const sessionId = `merge-session-${Date.now()}`;
       
       await prisma.cartItem.create({

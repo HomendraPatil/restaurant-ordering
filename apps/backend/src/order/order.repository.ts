@@ -27,7 +27,7 @@ export class OrderRepository {
         subtotal: data.subtotal,
         taxAmount: data.taxAmount,
         totalAmount: data.totalAmount,
-        status: 'RECEIVED',
+        status: 'PENDING',
         items: {
           create: data.items.map((item) => ({
             menuItemId: item.menuItemId,

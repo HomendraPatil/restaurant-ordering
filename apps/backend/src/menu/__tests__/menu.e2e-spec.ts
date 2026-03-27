@@ -24,6 +24,18 @@ describe('Menu (e2e)', () => {
 
     prisma = app.get<PrismaService>(PrismaService);
 
+    // Clean up in correct order to handle foreign keys
+    const testUsers = await prisma.user.findMany({ where: { email: { contains: 'test' } } });
+    const testUserIds = testUsers.map(u => u.id);
+    if (testUserIds.length > 0) {
+      await prisma.orderItem.deleteMany({ where: { order: { userId: { in: testUserIds } } } }).catch(() => {});
+      await prisma.order.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+      await prisma.cartItem.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+      await prisma.address.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+      await prisma.session.deleteMany({ where: { userId: { in: testUserIds } } }).catch(() => {});
+      await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
+    }
+    
     await prisma.user.deleteMany({ where: { email: { contains: 'test' } } });
     await prisma.category.deleteMany({ where: { name: { contains: 'Test' } } });
 
@@ -45,7 +57,11 @@ describe('Menu (e2e)', () => {
     });
     testCategoryId = category.id;
 
-    await prisma.menuItem.deleteMany({ where: { name: { contains: 'Test' } } });
+    try {
+      await prisma.menuItem.deleteMany({ where: { name: { contains: 'Test' } } });
+    } catch (e) {
+      // Ignore if no items to delete
+    }
     for (let i = 1; i <= 5; i++) {
       await prisma.menuItem.create({
         data: {
@@ -64,10 +80,18 @@ describe('Menu (e2e)', () => {
   });
 
   afterAll(async () => {
+    const testUsers = await prisma.user.findMany({ where: { email: { contains: 'test' } } });
+    const testUserIds = testUsers.map(u => u.id);
+    
+    await prisma.orderItem.deleteMany({ where: { order: { userId: { in: testUserIds } } } });
+    await prisma.order.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.cartItem.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.address.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.session.deleteMany({ where: { userId: { in: testUserIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
     await prisma.cartItem.deleteMany({ where: { menuItem: { name: { contains: 'Test Item' } } } }).catch(() => {});
     await prisma.menuItem.deleteMany({ where: { name: { contains: 'Test Item' } } }).catch(() => {});
     await prisma.category.deleteMany({ where: { name: { contains: 'Test Category' } } }).catch(() => {});
-    await prisma.user.deleteMany({ where: { email: { contains: 'test' } } }).catch(() => {});
     await app.close();
   });
 

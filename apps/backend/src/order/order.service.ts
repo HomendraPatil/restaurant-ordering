@@ -30,6 +30,15 @@ export class OrderService {
   ) {}
 
   async createOrder(data: CreateOrderData) {
+    if (!data.items || data.items.length === 0) {
+      throw new BadRequestException('Items array cannot be empty');
+    }
+
+    // Validate addressId is provided
+    if (!data.addressId) {
+      throw new BadRequestException('Address is required');
+    }
+
     const subtotal = data.items.reduce((sum, item) => {
       const itemTotal = item.unitPrice * item.quantity + item.customizationPrice * item.quantity;
       return sum + itemTotal;

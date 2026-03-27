@@ -97,6 +97,44 @@ describe('OrderService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('should create order with PENDING status by default', async () => {
+      const orderItems = [
+        {
+          menuItemId: mockMenuItemId,
+          quantity: 1,
+          unitPrice: 100,
+          customizationPrice: 0,
+          selectedOptions: [],
+        },
+      ];
+
+      prisma.address.findFirst.mockResolvedValue({ id: mockAddressId, userId: mockUserId });
+      prisma.menuItem.findUnique.mockResolvedValue({ id: mockMenuItemId, price: '100' });
+      
+      const mockOrder = {
+        id: 'order-123',
+        userId: mockUserId,
+        addressId: mockAddressId,
+        status: 'PENDING',
+        subtotal: 100,
+        taxAmount: 18,
+        totalAmount: 118,
+        items: [],
+        address: {},
+        user: {},
+      };
+      
+      orderRepository.create.mockResolvedValue(mockOrder);
+
+      const result = await orderService.createOrder({
+        userId: mockUserId,
+        addressId: mockAddressId,
+        items: orderItems,
+      });
+
+      expect(result.status).toBe('PENDING');
+    });
+
     it('should throw BadRequestException for non-existent menu item', async () => {
       prisma.address.findFirst.mockResolvedValue({ id: mockAddressId, userId: mockUserId });
       prisma.menuItem.findUnique.mockResolvedValue(null);
