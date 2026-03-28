@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 export interface CategoryPaginationParams {
   page?: number;
   limit?: number;
+  includeInactive?: boolean;
 }
 
 @Injectable()
@@ -12,10 +13,13 @@ export class CategoryRepository {
   constructor(private prisma: PrismaService) {}
 
   async findAll(pagination?: CategoryPaginationParams) {
-    const where = {
-      isActive: true,
+    const where: Prisma.CategoryWhereInput = {
       deletedAt: null,
     };
+
+    if (!pagination?.includeInactive) {
+      where.isActive = true;
+    }
 
     if (!pagination?.page && !pagination?.limit) {
       return this.prisma.category.findMany({

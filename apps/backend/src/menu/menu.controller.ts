@@ -4,7 +4,7 @@ import { MenuService } from './menu.service';
 import { Public } from '../common/decorators/public.decorator';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards';
 import { Roles } from '../auth/guards/roles.decorator';
-import { Role, Prisma } from '@prisma/client';
+import { Role, Prisma, CustomizationType } from '@prisma/client';
 
 @ApiTags('Menu')
 @Controller('menu')
@@ -49,6 +49,25 @@ export class MenuController {
       limit: limit ? Number(limit) : 12,
     };
     return this.menuService.findAll(filters, pagination);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/all')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all menu items for admin (including unavailable)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Paginated list of all menu items' })
+  async getAllMenuItemsForAdmin(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pagination = {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 100,
+    };
+    return this.menuService.findAllForAdmin(pagination);
   }
 
   @Public()
@@ -99,5 +118,77 @@ export class MenuController {
   @ApiResponse({ status: 404, description: 'Menu item not found' })
   async deleteMenuItem(@Param('id') id: string) {
     return this.menuService.delete(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Post(':menuItemId/customization-groups')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create customization group for menu item (admin only)' })
+  @ApiResponse({ status: 201, description: 'Customization group created' })
+  async createCustomizationGroup(
+    @Param('menuItemId') menuItemId: string,
+    @Body() data: { name: string; type: string; isRequired?: boolean; minSelections?: number; maxSelections?: number; sortOrder?: number },
+  ) {
+    return this.menuService.createCustomizationGroup({ ...data, menuItemId });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch('customization-groups/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update customization group (admin only)' })
+  @ApiResponse({ status: 200, description: 'Customization group updated' })
+  async updateCustomizationGroup(
+    @Param('id') id: string,
+    @Body() data: { name?: string; type?: string; isRequired?: boolean; minSelections?: number; maxSelections?: number; sortOrder?: number },
+  ) {
+    return this.menuService.updateCustomizationGroup(id, data);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete('customization-groups/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete customization group (admin only)' })
+  @ApiResponse({ status: 200, description: 'Customization group deleted' })
+  async deleteCustomizationGroup(@Param('id') id: string) {
+    return this.menuService.deleteCustomizationGroup(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Post('customization-groups/:groupId/options')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create customization option (admin only)' })
+  @ApiResponse({ status: 201, description: 'Customization option created' })
+  async createCustomizationOption(
+    @Param('groupId') groupId: string,
+    @Body() data: { name: string; priceModifier?: number; isDefault?: boolean; sortOrder?: number },
+  ) {
+    return this.menuService.createCustomizationOption({ ...data, groupId });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch('customization-options/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update customization option (admin only)' })
+  @ApiResponse({ status: 200, description: 'Customization option updated' })
+  async updateCustomizationOption(
+    @Param('id') id: string,
+    @Body() data: { name?: string; priceModifier?: number; isDefault?: boolean; sortOrder?: number },
+  ) {
+    return this.menuService.updateCustomizationOption(id, data);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete('customization-options/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete customization option (admin only)' })
+  @ApiResponse({ status: 200, description: 'Customization option deleted' })
+  async deleteCustomizationOption(@Param('id') id: string) {
+    return this.menuService.deleteCustomizationOption(id);
   }
 }

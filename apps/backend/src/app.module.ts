@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import * as path from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -15,6 +14,7 @@ import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
 import { EventsModule } from './events/events.module';
 import { AdminModule } from './admin/admin.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -48,6 +48,7 @@ import { AdminModule } from './admin/admin.module';
     PaymentModule,
     EventsModule,
     AdminModule,
+    UploadModule,
   ],
   providers: [
     {
