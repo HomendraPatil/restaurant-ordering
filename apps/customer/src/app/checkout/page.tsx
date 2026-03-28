@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Minus, Plus, MapPin, PlusCircle, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useCart, useRemoveFromCart, useUpdateCartItem, useClearCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 import { AuthModal } from '@/components/AuthModal';
 import { Header } from '@/components/Header';
 import { api } from '@/lib/api';
@@ -31,7 +32,8 @@ interface OrderItem {
 export default function CheckoutPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isAuthenticated, login, register, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { showToast } = useToast();
 
   const { data: cart, isLoading: cartLoading } = useCart();
   const removeItem = useRemoveFromCart();
@@ -174,13 +176,44 @@ export default function CheckoutPage() {
         _token
       );
     },
-    onSuccess: (order: { id: string }) => {
+    onSuccess: (_order: { id: string }) => {
       clearCart.mutate();
-      router.push(`/payment?orderId=${order.id}`);
+      router.push(`/payment?orderId=${_order.id}`);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to place order:', error);
-      alert('Failed to place order. Please try again.');
+      const message = error?.response?.data?.message || error?.message || 'Failed to place order. Please try again.';
+      
+      setIsPlacingOrder(false);
+      
+      const insufficientStockMatch = message.match(/Insufficient stock for (.+?)\. Available:/);
+      const outOfStockMatch = message.match(/Insufficient stock for (.+?)\. Available: (\d+)/);
+      
+      if (outOfStockMatch) {
+        const itemName = outOfStockMatch[1];
+        const availableStock = parseInt(outOfStockMatch[2], 10);
+        const cartItem = cart?.items.find((item) => item.menuItem.name === itemName);
+        
+        if (cartItem) {
+          removeItem.mutate(cartItem.id);
+          if (availableStock === 0) {
+            showToast('error', `${itemName} is out of stock and has been removed from your cart`);
+          } else {
+            showToast('error', `Only ${availableStock} ${itemName} available. Updated your cart.`);
+          }
+        }
+      } else if (insufficientStockMatch) {
+        const itemName = insufficientStockMatch[1];
+        const cartItem = cart?.items.find((item) => item.menuItem.name === itemName);
+        if (cartItem) {
+          removeItem.mutate(cartItem.id);
+          showToast('error', message);
+        } else {
+          showToast('error', message);
+        }
+      } else {
+        showToast('error', message);
+      }
     },
   });
 
@@ -465,6 +498,8 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
+
+          
 
           <button
             onClick={handlePlaceOrder}
