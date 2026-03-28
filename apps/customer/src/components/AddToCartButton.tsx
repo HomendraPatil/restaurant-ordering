@@ -30,6 +30,7 @@ export function AddToCartButton({
 
   const cartItem = cart?.items.find(item => item.menuItemId === menuItem.id);
   const isInCart = !!cartItem;
+  const isOutOfStock = menuItem.isLimited && menuItem.stockQuantity <= 0;
 
   const handleAddToCart = async () => {
     try {
@@ -95,6 +96,21 @@ export function AddToCartButton({
   };
 
   const isLoading = addToCart.isPending || updateCartItem.isPending || removeFromCart.isPending;
+
+  if (isOutOfStock) {
+    return (
+      <button
+        disabled
+        className={`
+          flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium h-11
+          bg-gray-100 text-gray-400 cursor-not-allowed
+          ${className}
+        `}
+      >
+        Out of Stock
+      </button>
+    );
+  }
 
   if (isInCart && cartItem) {
     return (

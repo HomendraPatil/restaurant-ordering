@@ -249,7 +249,8 @@ function MenuItemModal({ item, categories, isOpen, isLoading, onClose, onSave }:
   const [isVegan, setIsVegan] = useState(false);
   const [isGlutenFree, setIsGlutenFree] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
-  const [stockQuantity, setStockQuantity] = useState(0);
+  const [isLimited, setIsLimited] = useState(false);
+  const [stockQuantity, setStockQuantity] = useState(100);
   const [preparationTime, setPreparationTime] = useState(15);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -265,7 +266,8 @@ function MenuItemModal({ item, categories, isOpen, isLoading, onClose, onSave }:
       setIsVegan(item.isVegan ?? false);
       setIsGlutenFree(item.isGlutenFree ?? false);
       setIsAvailable(item.isAvailable ?? true);
-      setStockQuantity(item.stockQuantity ?? 0);
+      setIsLimited(item.isLimited ?? false);
+      setStockQuantity(item.stockQuantity ?? 100);
       setPreparationTime(item.preparationTime ?? 15);
     } else {
       setName('');
@@ -296,6 +298,7 @@ function MenuItemModal({ item, categories, isOpen, isLoading, onClose, onSave }:
       isVegan,
       isGlutenFree,
       isAvailable,
+      isLimited,
       stockQuantity,
       preparationTime,
     });
@@ -458,16 +461,6 @@ function MenuItemModal({ item, categories, isOpen, isLoading, onClose, onSave }:
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
-              <input
-                type="number"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(Number(e.target.value))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                min={0}
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Prep Time (min)</label>
               <input
                 type="number"
@@ -495,6 +488,36 @@ function MenuItemModal({ item, categories, isOpen, isLoading, onClose, onSave }:
             </button>
             <span className="text-sm text-gray-700">Available</span>
           </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsLimited(!isLimited)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                isLimited ? 'bg-orange-500' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isLimited ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className="text-sm text-gray-700">Track Stock</span>
+          </div>
+
+          {isLimited && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
+              <input
+                type="number"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(Number(e.target.value))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                min={0}
+              />
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button
