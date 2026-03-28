@@ -193,9 +193,13 @@ export class OrderService {
     if (status === 'CANCELLED' || status === 'PAYMENT_FAILED') {
       for (const item of order.items) {
         if (item.menuItem && item.menuItem.isLimited) {
-          await this.prisma.menuItem.updateMany({
+          await this.prisma.menuItem.update({
             where: { id: item.menuItemId },
-            data: { stockQuantity: { increment: item.quantity } },
+            data: {
+              stockQuantity: {
+                increment: item.quantity,
+              },
+            },
           });
         }
       }
