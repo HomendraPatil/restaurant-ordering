@@ -15,6 +15,7 @@ import { PaymentModule } from './payment/payment.module';
 import { EventsModule } from './events/events.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -56,5 +57,6 @@ import { UploadModule } from './upload/upload.module';
       useClass: ThrottlerGuard,
     },
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
