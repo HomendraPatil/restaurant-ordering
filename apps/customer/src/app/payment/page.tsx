@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useMemo } from 'react';
+import { Suspense, useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { CreditCard, CheckCircle, XCircle, Loader2, ArrowLeft } from 'lucide-react';
@@ -14,6 +14,7 @@ interface OrderDetails {
   subtotal: number;
   taxAmount: number;
   totalAmount: number;
+  createdAt: string;
   items: Array<{
     id: string;
     quantity: number;
@@ -55,6 +56,7 @@ function PaymentContent() {
 
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'success' | 'failed'>('pending');
   const [error, setError] = useState('');
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const { data: order, isLoading } = useQuery<OrderDetails>({
     queryKey: ['order', orderId],
@@ -64,6 +66,39 @@ function PaymentContent() {
     },
     enabled: !!orderId && isAuthenticated,
   });
+
+  useEffect(() => {
+    if (!order?.createdAt || order.status !== 'PENDING') return;
+    
+    const PAYMENT_TIMEOUT_MINUTES = 15;
+    const createdAt = new Date(order.createdAt).getTime();
+    const expiresAt = createdAt + (PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+    
+    const calculateTimeLeft = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, expiresAt - now);
+      return Math.floor(remaining / 1000);
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      const remaining = calculateTimeLeft();
+      setTimeLeft(remaining);
+      
+      if (remaining <= 0) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [order?.createdAt, order?.status]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const amountInPaise = useMemo(() => {
     if (!order?.totalAmount) return 0;
@@ -132,7 +167,7 @@ function PaymentContent() {
   };
 
   if (!isAuthenticated) {
-    router.push('/login?redirect=/payment?orderId=' + orderId);
+    router.push('/?showAuth=true&redirect=/payment?orderId=' + orderId);
     return null;
   }
 
@@ -223,7 +258,23 @@ function PaymentContent() {
           Back
         </button>
 
-        <h1 className="text-2xl font-bold mb-6">Complete Payment</h1>
+        <h1 className="text-2xl font-bold mb-2">Complete Payment</h1>
+        
+        {order?.status === 'PENDING' && timeLeft !== null && timeLeft > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-6 flex items-center justify-center gap-2">
+            <span className="text-orange-600 text-sm font-medium">
+              Complete payment within: <span className="text-orange-700 font-bold">{formatTime(timeLeft)}</span>
+            </span>
+          </div>
+        )}
+
+        {order?.status === 'PENDING' && timeLeft === 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
+            <p className="text-red-600 text-sm font-medium text-center">
+              Payment time has expired. Your order has been cancelled.
+            </p>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
