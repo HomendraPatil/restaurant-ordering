@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Search, Leaf, Heart, WheatOff, Clock, Star, Loader2 } from 'lucide-react';
@@ -10,6 +11,7 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { Header } from '@/components/Header';
 import { useCart, useAddToCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 import { AuthModal } from '@/components/AuthModal';
 import { AddToCartButton } from '@/components/AddToCartButton';
 import { CustomizationModal } from '@/components/CustomizationModal';
@@ -296,6 +298,9 @@ function MenuItemCard({ item, onOpenCart }: { item: MenuItem; onOpenCart: () => 
             <div className="flex items-center gap-1 text-sm text-slate-500">
               <Clock className="w-4 h-4" aria-hidden="true" />
               <span>{item.preparationTime} min</span>
+              {item.isLimited && item.stockQuantity > 0 && (
+                <span className="ml-2 text-orange-600">• Only {item.stockQuantity} left</span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold text-slate-900">₹{item.price}</span>
@@ -472,10 +477,38 @@ function SearchSection({
   );
 }
 
-export default function HomePage() {
+import { Suspense } from 'react';
+
+function HomePageContent() {
+  const searchParams = useSearchParams();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authRedirectTo, setAuthRedirectTo] = useState<string | undefined>();
+  const { showToast } = useToast();
+  const hasShownSessionExpired = useRef(false);
+
+  useEffect(() => {
+    if (searchParams.get('sessionExpired') === 'true' && !hasShownSessionExpired.current) {
+      hasShownSessionExpired.current = true;
+      showToast('error', 'Your session has expired. Please login again.');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('sessionExpired');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, showToast]);
+
+  useEffect(() => {
+    if (searchParams.get('showAuth') === 'true') {
+      const redirect = searchParams.get('redirect') || undefined;
+      setAuthRedirectTo(redirect);
+      setShowAuthModal(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('showAuth');
+      url.searchParams.delete('redirect');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -502,7 +535,19 @@ export default function HomePage() {
       </div>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} redirectTo={authRedirectTo} />
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+      </div>
+    }>
+      <HomePageContent />
+    </Suspense>
   );
 }
