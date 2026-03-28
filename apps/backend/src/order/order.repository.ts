@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -103,6 +103,14 @@ export class OrderRepository {
   }
 
   async addPayment(orderId: string, razorpayPaymentId: string, amount: number, status: string) {
+    const existingPayment = await this.prisma.payment.findUnique({
+      where: { razorpayPaymentId },
+    });
+
+    if (existingPayment) {
+      throw new ConflictException('Payment already processed');
+    }
+
     return this.prisma.payment.create({
       data: {
         orderId,

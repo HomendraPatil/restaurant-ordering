@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { OrderRepository } from './order.repository';
 import { CartRepository } from '../cart/cart.repository';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderGateway } from '../events/order.gateway';
+import { OrderStatus } from '@prisma/client';
 
 export interface OrderItemData {
   menuItemId: string;
@@ -24,6 +25,7 @@ export interface CreateOrderData {
 export class OrderService {
   private readonly TAX_RATE = 0.18;
   private readonly PREPARATION_TIME_PER_ITEM = 10; // minutes
+  private readonly PAYMENT_TIMEOUT_MINUTES = 15; // Pending orders expire after 15 minutes
 
   constructor(
     private orderRepository: OrderRepository,
@@ -37,7 +39,6 @@ export class OrderService {
       throw new BadRequestException('Items array cannot be empty');
     }
 
-    // Validate addressId is provided
     if (!data.addressId) {
       throw new BadRequestException('Address is required');
     }
@@ -50,7 +51,6 @@ export class OrderService {
     const taxAmount = subtotal * this.TAX_RATE;
     const totalAmount = subtotal + taxAmount;
 
-    // Verify address belongs to user
     const address = await this.prisma.address.findFirst({
       where: {
         id: data.addressId,
@@ -62,29 +62,86 @@ export class OrderService {
       throw new BadRequestException('Invalid address');
     }
 
-    // Verify all menu items exist
-    for (const item of data.items) {
-      const menuItem = await this.prisma.menuItem.findUnique({
-        where: { id: item.menuItemId },
-      });
-      if (!menuItem) {
-        throw new BadRequestException(`Menu item ${item.menuItemId} not found`);
+    return await this.prisma.$transaction(async (tx) => {
+      const menuItemPrices = new Map<string, { price: number; name: string; isLimited: boolean; stockQuantity: number; isAvailable: boolean }>();
+      
+      for (const item of data.items) {
+        const menuItem = await tx.menuItem.findUnique({
+          where: { id: item.menuItemId },
+        });
+        
+        if (!menuItem) {
+          throw new BadRequestException(`Menu item ${item.menuItemId} not found`);
+        }
+
+        menuItemPrices.set(item.menuItemId, {
+          price: Number(menuItem.price),
+          name: menuItem.name,
+          isLimited: menuItem.isLimited,
+          stockQuantity: menuItem.stockQuantity,
+          isAvailable: menuItem.isAvailable,
+        });
+
+        if (!menuItem.isAvailable) {
+          throw new ConflictException(`${menuItem.name} is not available`);
+        }
+
+        if (menuItem.isLimited) {
+          const result = await tx.menuItem.updateMany({
+            where: { 
+              id: item.menuItemId,
+              stockQuantity: { gte: item.quantity },
+            },
+            data: {
+              stockQuantity: { decrement: item.quantity },
+            },
+          });
+          
+          if (result.count === 0) {
+            throw new ConflictException(`Insufficient stock for ${menuItem.name}. Available: ${menuItem.stockQuantity}`);
+          }
+        }
       }
-    }
 
-    const order = await this.orderRepository.create({
-      userId: data.userId,
-      addressId: data.addressId,
-      subtotal: Math.round(subtotal * 100) / 100,
-      taxAmount: Math.round(taxAmount * 100) / 100,
-      totalAmount: Math.round(totalAmount * 100) / 100,
-      specialInstructions: data.specialInstructions,
-      items: data.items,
+      const recalculatedSubtotal = data.items.reduce((sum, item) => {
+        const menuItemPrice = menuItemPrices.get(item.menuItemId);
+        const unitPrice = menuItemPrice ? menuItemPrice.price : item.unitPrice;
+        const itemTotal = unitPrice * item.quantity + item.customizationPrice * item.quantity;
+        return sum + itemTotal;
+      }, 0);
+
+      const recalculatedTaxAmount = recalculatedSubtotal * this.TAX_RATE;
+      const recalculatedTotalAmount = recalculatedSubtotal + recalculatedTaxAmount;
+
+      const order = await tx.order.create({
+        data: {
+          userId: data.userId,
+          addressId: data.addressId,
+          status: 'PENDING',
+          subtotal: Math.round(recalculatedSubtotal * 100) / 100,
+          taxAmount: Math.round(recalculatedTaxAmount * 100) / 100,
+          totalAmount: Math.round(recalculatedTotalAmount * 100) / 100,
+          specialInstructions: data.specialInstructions,
+          items: {
+            create: data.items.map((item) => ({
+              menuItemId: item.menuItemId,
+              quantity: item.quantity,
+              unitPrice: menuItemPrices.get(item.menuItemId)?.price ?? item.unitPrice,
+              customizationPrice: item.customizationPrice,
+              specialInstructions: item.specialInstructions,
+              selectedOptions: item.selectedOptions || [],
+            })),
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      this.orderGateway.emitNewOrder(order);
+
+      return order;
     });
-
-    this.orderGateway.emitNewOrder(order);
-
-    return order;
   }
 
   async getOrder(id: string) {
@@ -92,7 +149,38 @@ export class OrderService {
   }
 
   async getUserOrders(userId: string) {
+    await this.cancelExpiredPendingOrders();
     return this.orderRepository.findByUserId(userId);
+  }
+
+  private async cancelExpiredPendingOrders() {
+    const timeoutDate = new Date();
+    timeoutDate.setMinutes(timeoutDate.getMinutes() - this.PAYMENT_TIMEOUT_MINUTES);
+
+    const expiredOrders = await this.prisma.order.findMany({
+      where: {
+        status: 'PENDING',
+        createdAt: {
+          lt: timeoutDate,
+        },
+      },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    for (const order of expiredOrders) {
+      try {
+        await this.updateOrderStatus(order.id, 'PAYMENT_FAILED');
+        console.log(`Auto-cancelled expired pending order: ${order.id}`);
+      } catch (error) {
+        console.error(`Failed to cancel expired order ${order.id}:`, error);
+      }
+    }
   }
 
   async updateOrderStatus(id: string, status: string) {
@@ -102,6 +190,23 @@ export class OrderService {
     }
 
     const previousStatus = order.status;
+
+    if (status === 'CANCELLED' || status === 'PAYMENT_FAILED') {
+      for (const item of order.items) {
+        if (item.menuItem && item.menuItem.isLimited) {
+          await this.prisma.menuItem.update({
+            where: { id: item.menuItemId },
+            data: {
+              stockQuantity: {
+                increment: item.quantity,
+              },
+            },
+          });
+          console.log(`Stock restored for ${item.menuItem.name}: +${item.quantity}`);
+        }
+      }
+    }
+
     const updatedOrder = await this.orderRepository.updateStatus(id, status);
 
     const estimatedTime = this.calculateEstimatedTime(updatedOrder);
@@ -127,5 +232,22 @@ export class OrderService {
 
   async recordPayment(orderId: string, razorpayPaymentId: string, amount: number, status: string) {
     return this.orderRepository.addPayment(orderId, razorpayPaymentId, amount, status);
+  }
+
+  async releaseStock(orderId: string) {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) return;
+
+    for (const item of order.items) {
+      if (item.menuItem && item.menuItem.isLimited) {
+        await this.prisma.menuItem.updateMany({
+          where: { id: item.menuItemId },
+          data: {
+            stockQuantity: { increment: item.quantity },
+          },
+        });
+        console.log(`Stock released for ${item.menuItem.name}: +${item.quantity}`);
+      }
+    }
   }
 }
