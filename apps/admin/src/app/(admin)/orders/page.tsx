@@ -17,23 +17,14 @@ import {
   WifiOff
 } from 'lucide-react';
 import { adminApi, AdminOrder, OrdersResponse } from '@/lib/api';
-import { AdminLayout } from '@/app/AdminLayout';
 import { useAdminSocket } from '@/hooks/useAdminSocket';
-
-const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
-  PENDING: { color: 'text-orange-600', bg: 'bg-orange-50', icon: <Clock className="w-4 h-4" />, label: 'Pending' },
-  RECEIVED: { color: 'text-blue-600', bg: 'bg-blue-50', icon: <Package className="w-4 h-4" />, label: 'Received' },
-  PREPARING: { color: 'text-yellow-600', bg: 'bg-yellow-50', icon: <Clock className="w-4 h-4" />, label: 'Preparing' },
-  READY: { color: 'text-green-600', bg: 'bg-green-50', icon: <CheckCircle className="w-4 h-4" />, label: 'Ready' },
-  COMPLETED: { color: 'text-gray-600', bg: 'bg-gray-50', icon: <CheckCircle className="w-4 h-4" />, label: 'Completed' },
-  CANCELLED: { color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="w-4 h-4" />, label: 'Cancelled' },
-};
+import { OrderStatus, ORDER_STATUS_DISPLAY, PaymentStatus, PAYMENT_STATUS_DISPLAY } from '@restaurant/types';
 
 const NEXT_STATUS: Record<string, string> = {
-  PENDING: 'RECEIVED',
-  RECEIVED: 'PREPARING',
-  PREPARING: 'READY',
-  READY: 'COMPLETED',
+  [OrderStatus.PENDING]: OrderStatus.RECEIVED,
+  [OrderStatus.RECEIVED]: OrderStatus.PREPARING,
+  [OrderStatus.PREPARING]: OrderStatus.READY,
+  [OrderStatus.READY]: OrderStatus.COMPLETED,
 };
 
 interface OrderModalProps {
@@ -59,7 +50,7 @@ function OrderModal({ order, isOpen, isLoading, onClose }: OrderModalProps) {
 
   if (!order) return null;
 
-  const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
+  const config = ORDER_STATUS_DISPLAY[order.status as OrderStatus] || ORDER_STATUS_DISPLAY[OrderStatus.PENDING];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -71,8 +62,7 @@ function OrderModal({ order, isOpen, isLoading, onClose }: OrderModalProps) {
               <p className="font-mono text-sm text-gray-500">Order #{order.id.slice(0, 8)}</p>
               <h2 className="text-xl font-bold text-gray-900">{order.user.name}</h2>
             </div>
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${config.color} ${config.bg}`}>
-              {config.icon}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${config.textColor} ${config.bgColor}`}>
               <span>{config.label}</span>
             </div>
           </div>
@@ -137,11 +127,14 @@ function OrderModal({ order, isOpen, isLoading, onClose }: OrderModalProps) {
               <div className="flex items-center gap-2 text-sm">
                 <CreditCard className="w-4 h-4 text-gray-400" />
                 <span className="text-gray-600">{order.payment.razorpayPaymentId || 'N/A'}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  order.payment.status === 'SUCCESS' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
-                }`}>
-                  {order.payment.status}
-                </span>
+                {(() => {
+                  const paymentConfig = PAYMENT_STATUS_DISPLAY[order.payment.status as PaymentStatus] || PAYMENT_STATUS_DISPLAY[PaymentStatus.PENDING];
+                  return (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor}`}>
+                      {paymentConfig.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -154,13 +147,13 @@ function OrderModal({ order, isOpen, isLoading, onClose }: OrderModalProps) {
                 <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200" />
                 <div className="space-y-4">
                   {order.statusHistory.map((history) => {
-                    const statusConfig = STATUS_CONFIG[history.newStatus] || STATUS_CONFIG.PENDING;
+                    const statusConfig = ORDER_STATUS_DISPLAY[history.newStatus as OrderStatus] || ORDER_STATUS_DISPLAY[OrderStatus.PENDING];
                     return (
                       <div key={history.id} className="relative flex items-start gap-3 pl-6">
-                        <div className={`absolute left-0 w-4 h-4 rounded-full border-2 border-white ${statusConfig.bg} ${statusConfig.color.replace('text-', 'bg-')}`} />
+                        <div className={`absolute left-0 w-4 h-4 rounded-full border-2 border-white ${statusConfig.bgColor} ${statusConfig.textColor.replace('text-', 'bg-')}`} />
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <span className={`text-sm font-medium ${statusConfig.color}`}>
+                            <span className={`text-sm font-medium ${statusConfig.textColor}`}>
                               {statusConfig.label}
                             </span>
                             <span className="text-xs text-gray-400">
@@ -174,7 +167,7 @@ function OrderModal({ order, isOpen, isLoading, onClose }: OrderModalProps) {
                           </div>
                           {history.oldStatus && (
                             <p className="text-xs text-gray-500 mt-0.5">
-                              Changed from {STATUS_CONFIG[history.oldStatus]?.label || history.oldStatus}
+                              Changed from {ORDER_STATUS_DISPLAY[history.oldStatus as OrderStatus]?.label || history.oldStatus}
                             </p>
                           )}
                           {history.changedBy && (
@@ -231,7 +224,7 @@ interface OrderCardProps {
 
 function OrderCard({ order, onStatusUpdate, onViewDetails }: OrderCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
+  const config = ORDER_STATUS_DISPLAY[order.status as OrderStatus] || ORDER_STATUS_DISPLAY[OrderStatus.PENDING];
   const nextStatus = NEXT_STATUS[order.status];
 
   const handleStatusUpdate = async (status: string, e: React.MouseEvent) => {
@@ -270,10 +263,9 @@ function OrderCard({ order, onStatusUpdate, onViewDetails }: OrderCardProps) {
           <p className="text-sm text-gray-500">{order.user.email}</p>
         </div>
         <div 
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${config.color} ${config.bg}`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${config.textColor} ${config.bgColor}`}
           onClick={(e) => e.stopPropagation()}
         >
-          {config.icon}
           <span>{config.label}</span>
         </div>
       </div>
@@ -305,10 +297,8 @@ function OrderCard({ order, onStatusUpdate, onViewDetails }: OrderCardProps) {
           >
             {isUpdating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              STATUS_CONFIG[nextStatus]?.icon
-            )}
-            {STATUS_CONFIG[nextStatus]?.label || 'Update'}
+            ) : null}
+            {ORDER_STATUS_DISPLAY[nextStatus as OrderStatus]?.label || 'Update'}
           </button>
         )}
         {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
@@ -398,8 +388,9 @@ function AdminOrdersPage() {
       const token = localStorage.getItem('admin_token');
       return adminApi.patch(`/admin/orders/${orderId}/status`, { status }, token ?? undefined);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-order', variables.orderId] });
     },
   });
 
@@ -409,9 +400,9 @@ function AdminOrdersPage() {
 
   const stats = {
     total: data?.total || 0,
-    pending: data?.orders.filter(o => o.status === 'PENDING' || o.status === 'RECEIVED').length || 0,
-    preparing: data?.orders.filter(o => o.status === 'PREPARING').length || 0,
-    ready: data?.orders.filter(o => o.status === 'READY').length || 0,
+    pending: data?.orders.filter(o => o.status === OrderStatus.PENDING || o.status === OrderStatus.RECEIVED).length || 0,
+    preparing: data?.orders.filter(o => o.status === OrderStatus.PREPARING).length || 0,
+    ready: data?.orders.filter(o => o.status === OrderStatus.READY).length || 0,
   };
 
   return (
@@ -501,7 +492,7 @@ function AdminOrdersPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+            className="px-4 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
           >
             <option value="">All Status</option>
             <option value="RECEIVED">Received</option>
@@ -559,9 +550,5 @@ function AdminOrdersPage() {
 }
 
 export default function DashboardWithLayout() {
-  return (
-    <AdminLayout>
-      <AdminOrdersPage />
-    </AdminLayout>
-  );
+  return <AdminOrdersPage />;
 }
