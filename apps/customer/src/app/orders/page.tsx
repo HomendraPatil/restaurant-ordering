@@ -42,13 +42,16 @@ function OrderCard({ order }: { order: Order }) {
   const config = ORDER_STATUS_DISPLAY[order.status as OrderStatus] || ORDER_STATUS_DISPLAY[OrderStatus.PENDING];
   const legacyConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
   const isActive = [OrderStatus.PENDING, OrderStatus.RECEIVED, OrderStatus.PREPARING, OrderStatus.READY].includes(order.status as OrderStatus);
+  const isPending = order.status === 'PENDING';
 
   const itemNames = order.items.slice(0, 2).map(i => i.menuItem.name).join(', ');
   const moreItems = order.items.length > 2 ? ` +${order.items.length - 2} more` : '';
 
+  const navigateTo = isPending ? `/payment?orderId=${order.id}` : `/order/${order.id}/tracking`;
+
   return (
-    <Link href={`/order/${order.id}/tracking`}>
-      <div className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer">
+    <Link href={navigateTo} className="block">
+      <div className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer h-full">
         <div className="flex justify-between items-start mb-2">
           <div>
             <p className="font-mono text-sm text-gray-500">#{order.id.slice(0, 8)}</p>
@@ -72,11 +75,19 @@ function OrderCard({ order }: { order: Order }) {
           <p className="font-semibold">₹{Number(order.totalAmount).toFixed(2)}</p>
         </div>
 
-        {isActive && (
+        {isPending && (
           <div className="mt-3 pt-3 border-t border-gray-100">
-            <button className="text-sm text-orange-600 font-medium hover:text-orange-700">
+            <span className="text-sm text-green-600 font-medium">
+              Pay Now →
+            </span>
+          </div>
+        )}
+
+        {isActive && !isPending && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <span className="text-sm text-orange-600 font-medium">
               Track Order →
-            </button>
+            </span>
           </div>
         )}
       </div>
@@ -139,7 +150,7 @@ export default function OrdersPage() {
         <h1 className="text-2xl font-bold mb-6">Your Orders</h1>
 
         {orders && orders.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {orders.map((order) => (
               <OrderCard key={order.id} order={order} />
             ))}

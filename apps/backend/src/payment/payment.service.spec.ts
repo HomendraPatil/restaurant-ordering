@@ -1,21 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { ConflictException } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { OrderRepository } from '../order/order.repository';
+import { OrderService } from '../order/order.service';
 import { OrderGateway } from '../events/order.gateway';
+import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
 
 describe('PaymentService', () => {
   let paymentService: PaymentService;
   let orderRepository: { addPayment: jest.Mock; findById: jest.Mock; updateStatus: jest.Mock };
+  let orderService: { releaseStock: jest.Mock };
   let configService: { get: jest.Mock };
   let orderGateway: { emitOrderStatusUpdate: jest.Mock };
+  let prisma: { payment: { findUnique: jest.Mock; create: jest.Mock } };
 
   beforeEach(async () => {
     orderRepository = {
       addPayment: jest.fn(),
       findById: jest.fn(),
       updateStatus: jest.fn(),
+    };
+
+    orderService = {
+      releaseStock: jest.fn(),
     };
     
     configService = {
@@ -32,12 +41,21 @@ describe('PaymentService', () => {
       emitOrderStatusUpdate: jest.fn(),
     };
 
+    prisma = {
+      payment: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentService,
         { provide: OrderRepository, useValue: orderRepository },
+        { provide: OrderService, useValue: orderService },
         { provide: ConfigService, useValue: configService },
         { provide: OrderGateway, useValue: orderGateway },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
@@ -114,8 +132,9 @@ describe('PaymentService', () => {
         totalAmount: 100,
       };
       
+      prisma.payment.findUnique.mockResolvedValue(null);
+      prisma.payment.create.mockResolvedValue({ id: 'payment-123' });
       orderRepository.findById.mockResolvedValue(mockOrder);
-      orderRepository.addPayment.mockResolvedValue({ id: 'payment-123' });
       orderRepository.updateStatus.mockResolvedValue({ ...mockOrder, status: 'RECEIVED' });
 
       const result = await paymentService.recordPaymentSuccess({
@@ -124,8 +143,36 @@ describe('PaymentService', () => {
         amount: 100,
       });
 
-      expect(orderRepository.addPayment).toHaveBeenCalledWith('order-123', 'pay_123', 100, 'SUCCESS');
       expect(orderRepository.updateStatus).toHaveBeenCalledWith('order-123', 'RECEIVED');
+    });
+
+    it('should throw ConflictException for duplicate payment', async () => {
+      orderRepository.addPayment.mockRejectedValue(new ConflictException('Payment already processed'));
+
+      await expect(
+        paymentService.recordPaymentSuccess({
+          orderId: 'order-123',
+          razorpayPaymentId: 'pay_123',
+          amount: 100,
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('recordPaymentFailure', () => {
+    it('should record failed payment and restore stock', async () => {
+      orderRepository.addPayment.mockResolvedValue({ id: 'payment-failed' });
+      orderRepository.updateStatus.mockResolvedValue({ 
+        id: 'order-123', 
+        status: 'PAYMENT_FAILED' 
+      });
+      orderService.releaseStock.mockResolvedValue(undefined);
+
+      const result = await paymentService.recordPaymentFailure('order-123', 'pay_failed_123');
+
+      expect(orderRepository.addPayment).toHaveBeenCalledWith('order-123', 'pay_failed_123', 0, 'FAILED');
+      expect(orderService.releaseStock).toHaveBeenCalledWith('order-123');
+      expect(orderRepository.updateStatus).toHaveBeenCalledWith('order-123', 'PAYMENT_FAILED');
     });
   });
 });

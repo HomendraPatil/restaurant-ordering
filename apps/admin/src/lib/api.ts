@@ -157,6 +157,7 @@ export const menuApi = {
     if (data.price !== undefined) payload.price = Number(data.price);
     if (data.categoryId) payload.category = { connect: { id: data.categoryId } };
     if (data.isAvailable !== undefined) payload.isAvailable = data.isAvailable;
+    if (data.isLimited !== undefined) payload.isLimited = data.isLimited;
     if (data.isVegetarian !== undefined) payload.isVegetarian = data.isVegetarian;
     if (data.isVegan !== undefined) payload.isVegan = data.isVegan;
     if (data.isGlutenFree !== undefined) payload.isGlutenFree = data.isGlutenFree;
@@ -308,6 +309,7 @@ export interface MenuItem {
   category?: Category;
   imageUrl?: string;
   isAvailable: boolean;
+  isLimited: boolean;
   isVegetarian: boolean;
   isVegan: boolean;
   isGlutenFree: boolean;

@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { OrderRepository } from '../order/order.repository';
+import { OrderService } from '../order/order.service';
 import { OrderGateway } from '../events/order.gateway';
+import { PrismaService } from '../prisma/prisma.service';
 
 const Razorpay = require('razorpay');
 
@@ -31,7 +33,10 @@ export class PaymentService {
   constructor(
     private configService: ConfigService,
     private orderRepository: OrderRepository,
+    @Inject(forwardRef(() => OrderService))
+    private orderService: OrderService,
     private orderGateway: OrderGateway,
+    private prisma: PrismaService,
   ) {
     this.razorpay = new Razorpay({
       key_id: this.configService.get<string>('RAZORPAY_KEY_ID') || '',
@@ -79,6 +84,12 @@ export class PaymentService {
       'SUCCESS',
     );
 
+    order = order || await this.orderRepository.findById(params.orderId);
+    
+    if (!order) {
+      throw new Error('Order not found after payment');
+    }
+
     const updatedOrder = await this.orderRepository.updateStatus(params.orderId, 'RECEIVED');
     
     this.orderGateway.emitOrderStatusUpdate(params.orderId, 'RECEIVED', 'PENDING');
@@ -93,6 +104,8 @@ export class PaymentService {
       0,
       'FAILED',
     );
+
+    await this.orderService.releaseStock(orderId);
 
     const updatedOrder = await this.orderRepository.updateStatus(orderId, 'PAYMENT_FAILED');
     return updatedOrder;
