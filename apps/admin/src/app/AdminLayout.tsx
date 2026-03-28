@@ -8,7 +8,6 @@ import {
   Package, 
   Utensils, 
   Users, 
-  Settings, 
   LogOut,
   Menu,
   X,
@@ -21,7 +20,6 @@ const NAV_ITEMS = [
   { href: '/orders', label: 'Orders', icon: Package },
   { href: '/menu', label: 'Menu', icon: Utensils },
   { href: '/users', label: 'Users', icon: Users },
-  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -82,6 +82,8 @@ export class AuthService {
       name: user.name,
       phone: user.phone ?? undefined,
       role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 }

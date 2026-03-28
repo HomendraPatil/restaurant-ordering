@@ -16,15 +16,18 @@ export class CategoryController {
   @ApiOperation({ summary: 'Get all categories (public)' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiQuery({ name: 'includeInactive', required: false, type: Boolean, description: 'Include inactive categories (admin only)' })
   @ApiResponse({ status: 200, description: 'List of categories (paginated if page/limit provided)' })
   async getAllCategories(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('includeInactive') includeInactive?: string,
   ) {
     const pagination = page || limit ? {
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 12,
-    } : undefined;
+      includeInactive: includeInactive === 'true',
+    } : { includeInactive: includeInactive === 'true' };
     return this.categoryService.findAll(pagination);
   }
 

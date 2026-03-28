@@ -4,11 +4,13 @@ export enum Role {
 }
 
 export enum OrderStatus {
+  PENDING = 'PENDING',
   RECEIVED = 'RECEIVED',
   PREPARING = 'PREPARING',
   READY = 'READY',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+  PAYMENT_FAILED = 'PAYMENT_FAILED',
 }
 
 export enum PaymentStatus {
@@ -22,6 +24,107 @@ export enum CustomizationType {
   ADDON = 'ADDON',
   TEXT = 'TEXT',
 }
+
+export interface StatusConfig {
+  label: string;
+  color: string;
+  bgColor: string;
+  textColor: string;
+  borderColor?: string;
+}
+
+export const ROLE_DISPLAY: Record<Role, StatusConfig> = {
+  [Role.ADMIN]: {
+    label: 'Admin',
+    color: 'purple',
+    bgColor: 'bg-purple-50',
+    textColor: 'text-purple-600',
+    borderColor: 'border-purple-200',
+  },
+  [Role.CUSTOMER]: {
+    label: 'Customer',
+    color: 'blue',
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-600',
+    borderColor: 'border-blue-200',
+  },
+};
+
+export const ORDER_STATUS_DISPLAY: Record<OrderStatus, StatusConfig> = {
+  [OrderStatus.PENDING]: {
+    label: 'Pending',
+    color: 'yellow',
+    bgColor: 'bg-yellow-50',
+    textColor: 'text-yellow-600',
+    borderColor: 'border-yellow-200',
+  },
+  [OrderStatus.RECEIVED]: {
+    label: 'Received',
+    color: 'blue',
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-600',
+    borderColor: 'border-blue-200',
+  },
+  [OrderStatus.PREPARING]: {
+    label: 'Preparing',
+    color: 'orange',
+    bgColor: 'bg-orange-50',
+    textColor: 'text-orange-600',
+    borderColor: 'border-orange-200',
+  },
+  [OrderStatus.READY]: {
+    label: 'Ready',
+    color: 'green',
+    bgColor: 'bg-green-50',
+    textColor: 'text-green-600',
+    borderColor: 'border-green-200',
+  },
+  [OrderStatus.COMPLETED]: {
+    label: 'Completed',
+    color: 'green',
+    bgColor: 'bg-green-50',
+    textColor: 'text-green-600',
+    borderColor: 'border-green-200',
+  },
+  [OrderStatus.CANCELLED]: {
+    label: 'Cancelled',
+    color: 'red',
+    bgColor: 'bg-red-50',
+    textColor: 'text-red-600',
+    borderColor: 'border-red-200',
+  },
+  [OrderStatus.PAYMENT_FAILED]: {
+    label: 'Payment Failed',
+    color: 'red',
+    bgColor: 'bg-red-50',
+    textColor: 'text-red-600',
+    borderColor: 'border-red-200',
+  },
+};
+
+export const PAYMENT_STATUS_DISPLAY: Record<PaymentStatus, StatusConfig> = {
+  [PaymentStatus.PENDING]: {
+    label: 'Pending',
+    color: 'yellow',
+    bgColor: 'bg-yellow-50',
+    textColor: 'text-yellow-600',
+    borderColor: 'border-yellow-200',
+  },
+  [PaymentStatus.SUCCESS]: {
+    label: 'Success',
+    color: 'green',
+    bgColor: 'bg-green-50',
+    textColor: 'text-green-600',
+    borderColor: 'border-green-200',
+  },
+  [PaymentStatus.FAILED]: {
+    label: 'Failed',
+    color: 'red',
+    bgColor: 'bg-red-50',
+    textColor: 'text-red-600',
+    borderColor: 'border-red-200',
+  },
+};
 
 export interface User {
   id: string;

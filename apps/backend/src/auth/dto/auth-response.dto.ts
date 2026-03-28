@@ -16,6 +16,12 @@ export class UserResponseDto {
 
   @ApiResponseProperty({ enum: Role })
   role: Role;
+
+  @ApiResponseProperty()
+  createdAt: Date;
+
+  @ApiResponseProperty()
+  updatedAt: Date;
 }
 
 export class AuthResponseDto {

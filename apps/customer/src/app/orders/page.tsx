@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/AuthModal';
 import { Header } from '@/components/Header';
+import { OrderStatus, ORDER_STATUS_DISPLAY } from '@restaurant/types';
 import Link from 'next/link';
 
 interface OrderItem {
@@ -38,8 +39,9 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: React.Rea
 
 function OrderCard({ order }: { order: Order }) {
   const router = useRouter();
-  const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
-  const isActive = ['PENDING', 'RECEIVED', 'PREPARING', 'READY'].includes(order.status);
+  const config = ORDER_STATUS_DISPLAY[order.status as OrderStatus] || ORDER_STATUS_DISPLAY[OrderStatus.PENDING];
+  const legacyConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
+  const isActive = [OrderStatus.PENDING, OrderStatus.RECEIVED, OrderStatus.PREPARING, OrderStatus.READY].includes(order.status as OrderStatus);
 
   const itemNames = order.items.slice(0, 2).map(i => i.menuItem.name).join(', ');
   const moreItems = order.items.length > 2 ? ` +${order.items.length - 2} more` : '';
@@ -52,9 +54,9 @@ function OrderCard({ order }: { order: Order }) {
             <p className="font-mono text-sm text-gray-500">#{order.id.slice(0, 8)}</p>
             <p className="font-medium text-gray-900">{itemNames}{moreItems}</p>
           </div>
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.color} ${config.bg}`}>
-            {config.icon}
-            <span>{order.status}</span>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${legacyConfig.color} ${legacyConfig.bg}`}>
+            {legacyConfig.icon}
+            <span>{config.label}</span>
           </div>
         </div>
         
