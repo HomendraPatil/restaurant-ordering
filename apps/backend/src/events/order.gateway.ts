@@ -22,11 +22,9 @@ export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private connectedClients: Map<string, Set<string>> = new Map();
 
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
     this.connectedClients.forEach((orderIds, clientId) => {
       if (clientId === client.id) {
         orderIds.forEach((orderId) => this.leaveOrderRoom(client, orderId));
@@ -46,7 +44,6 @@ export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     this.connectedClients.get(client.id)?.add(orderId);
     
-    console.log(`Client ${client.id} joined order room: ${orderId}`);
     return { event: 'joined', data: { orderId } };
   }
 
@@ -62,21 +59,18 @@ export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('joinAdminRoom')
   handleJoinAdminRoom(@ConnectedSocket() client: Socket) {
     client.join('admin');
-    console.log(`Client ${client.id} joined admin room`);
     return { event: 'joined', data: { room: 'admin' } };
   }
 
   @SubscribeMessage('leaveAdminRoom')
   handleLeaveAdminRoom(@ConnectedSocket() client: Socket) {
     client.leave('admin');
-    console.log(`Client ${client.id} left admin room`);
     return { event: 'left', data: { room: 'admin' } };
   }
 
   private leaveOrderRoom(client: Socket, orderId: string) {
     client.leave(`order:${orderId}`);
     this.connectedClients.get(client.id)?.delete(orderId);
-    console.log(`Client ${client.id} left order room: ${orderId}`);
   }
 
   emitOrderStatusUpdate(
@@ -95,7 +89,6 @@ export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
     
     this.server.to(`order:${orderId}`).emit('orderStatusUpdate', eventData);
     this.server.to('admin').emit('orderStatusUpdate', eventData);
-    console.log(`Emitted status update for order ${orderId}: ${status}`);
   }
 
   emitNewOrder(order: any) {
@@ -110,7 +103,6 @@ export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
     
     this.server.to('admin').emit('newOrder', eventData);
-    console.log(`Emitted new order: ${order.id}`);
   }
 
   getConnectedClientsCount(orderId: string): number {

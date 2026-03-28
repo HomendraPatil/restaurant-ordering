@@ -176,7 +176,6 @@ export class OrderService {
     for (const order of expiredOrders) {
       try {
         await this.updateOrderStatus(order.id, 'PAYMENT_FAILED');
-        console.log(`Auto-cancelled expired pending order: ${order.id}`);
       } catch (error) {
         console.error(`Failed to cancel expired order ${order.id}:`, error);
       }
@@ -194,15 +193,10 @@ export class OrderService {
     if (status === 'CANCELLED' || status === 'PAYMENT_FAILED') {
       for (const item of order.items) {
         if (item.menuItem && item.menuItem.isLimited) {
-          await this.prisma.menuItem.update({
+          await this.prisma.menuItem.updateMany({
             where: { id: item.menuItemId },
-            data: {
-              stockQuantity: {
-                increment: item.quantity,
-              },
-            },
+            data: { stockQuantity: { increment: item.quantity } },
           });
-          console.log(`Stock restored for ${item.menuItem.name}: +${item.quantity}`);
         }
       }
     }
@@ -246,7 +240,6 @@ export class OrderService {
             stockQuantity: { increment: item.quantity },
           },
         });
-        console.log(`Stock released for ${item.menuItem.name}: +${item.quantity}`);
       }
     }
   }
