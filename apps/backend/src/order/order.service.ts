@@ -176,7 +176,6 @@ export class OrderService {
     for (const order of expiredOrders) {
       try {
         await this.updateOrderStatus(order.id, 'PAYMENT_FAILED');
-        console.log(`Auto-cancelled expired pending order: ${order.id}`);
       } catch (error) {
         console.error(`Failed to cancel expired order ${order.id}:`, error);
       }
@@ -202,7 +201,6 @@ export class OrderService {
               },
             },
           });
-          console.log(`Stock restored for ${item.menuItem.name}: +${item.quantity}`);
         }
       }
     }
@@ -246,7 +244,6 @@ export class OrderService {
             stockQuantity: { increment: item.quantity },
           },
         });
-        console.log(`Stock released for ${item.menuItem.name}: +${item.quantity}`);
       }
     }
   }

@@ -39,13 +39,44 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Restaurant Ordering API')
-    .setDescription('API documentation for the Restaurant Ordering System')
+    .setDescription(`
+## Overview
+API for the Restaurant Ordering System - a full-stack food delivery platform.
+
+## Authentication
+Most endpoints require JWT authentication. Use the login endpoint to get an access token.
+
+## Roles
+- **CUSTOMER**: Can browse menu, manage cart, place orders
+- **ADMIN**: All customer permissions + manage menu and orders
+
+## Features
+- JWT Authentication with role-based access
+- Real-time order tracking via WebSockets
+- Stock management with race condition protection
+- Payment integration with Razorpay
+    `)
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
+      'JWT-auth',
+    )
+    .addTag('Auth', 'Authentication endpoints')
+    .addTag('Menu', 'Menu and category endpoints')
+    .addTag('Cart', 'Shopping cart endpoints')
+    .addTag('Orders', 'Order management endpoints')
+    .addTag('Payment', 'Payment processing endpoints')
+    .addTag('User', 'User profile and addresses')
+    .addTag('Admin', 'Admin management endpoints')
+    .addTag('Health', 'Health check endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
