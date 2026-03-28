@@ -32,7 +32,7 @@ erDiagram
     
     USER {
         string id PK
-        string email UK
+        string email
         string passwordHash
         string name
         string phone
@@ -43,7 +43,7 @@ erDiagram
     
     SESSION {
         string id PK
-        string sessionToken UK
+        string sessionToken
         string userId FK
         string refreshToken
         datetime expiresAt
@@ -68,7 +68,7 @@ erDiagram
         string name
         string description
         string imageUrl
-        string slug UK
+        string slug
         int sortOrder
         boolean isActive
         datetime createdAt
@@ -81,7 +81,7 @@ erDiagram
     MENU_ITEM {
         string id PK
         string categoryId FK
-        string slug UK
+        string slug
         string name
         string description
         string imageUrl
@@ -148,12 +148,12 @@ erDiagram
     ORDER {
         string id PK
         string userId FK
-        string status "PENDING|RECEIVED|PREPARING|READY|COMPLETED|CANCELLED|PAYMENT_FAILED"
+        string status
         decimal subtotal
         decimal taxAmount
         decimal totalAmount
         string addressId FK
-        string razorpayPaymentId UK
+        string razorpayPaymentId
         string specialInstructions
         datetime createdAt
     }
@@ -171,8 +171,8 @@ erDiagram
     
     PAYMENT {
         string id PK
-        string orderId FK UK
-        string razorpayPaymentId UK
+        string orderId FK
+        string razorpayPaymentId
         decimal amount
         string status "PENDING|SUCCESS|FAILED"
         datetime createdAt
