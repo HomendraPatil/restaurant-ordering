@@ -2,6 +2,7 @@ const API_URL = 'http://localhost:3000/api/v1';
 
 interface FetchOptions extends RequestInit {
   token?: string;
+  _skipAuthRedirect?: boolean;
 }
 
 class ApiClient {
@@ -12,7 +13,7 @@ class ApiClient {
   }
 
   private async fetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
-    const { token, ...fetchOptions } = options;
+    const { token, _skipAuthRedirect, ...fetchOptions } = options;
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -31,6 +32,11 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      if (response.status === 401 && !_skipAuthRedirect && typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/?sessionExpired=true';
+      }
       const error = await response.json().catch(() => ({ message: 'An error occurred' }));
       throw new Error(error.message || `HTTP error! status: ${response.status}`);
     }

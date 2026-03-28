@@ -64,7 +64,7 @@ export function Header() {
                 </button>
               ) : (
                 <Link
-                  href="/"
+                  href="/?showAuth=true"
                   className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
                 >
                   <User className="w-4 h-4" />
