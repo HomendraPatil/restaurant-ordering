@@ -9,6 +9,7 @@ import { useOrderSocket } from '@/hooks/useOrderSocket';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/AuthModal';
 import { Header } from '@/components/Header';
+import { OrderStatus, ORDER_STATUS_DISPLAY } from '@restaurant/types';
 
 interface OrderItem {
   id: string;
@@ -35,8 +36,6 @@ interface Order {
   };
 }
 
-type OrderStatus = 'PENDING' | 'RECEIVED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED' | 'PAYMENT_FAILED';
-
 interface StatusStep {
   key: OrderStatus;
   label: string;
@@ -45,10 +44,10 @@ interface StatusStep {
 }
 
 const STATUS_STEPS: StatusStep[] = [
-  { key: 'RECEIVED', label: 'Order Received', description: 'Your order has been placed', icon: <CheckCircle className="w-6 h-6" /> },
-  { key: 'PREPARING', label: 'Preparing', description: 'Chef is preparing your food', icon: <ChefHat className="w-6 h-6" /> },
-  { key: 'READY', label: 'Ready', description: 'Your order is ready for pickup', icon: <UtensilsCrossed className="w-6 h-6" /> },
-  { key: 'COMPLETED', label: 'Completed', description: 'Order picked up', icon: <Package className="w-6 h-6" /> },
+  { key: OrderStatus.RECEIVED, label: 'Order Received', description: 'Your order has been placed', icon: <CheckCircle className="w-6 h-6" /> },
+  { key: OrderStatus.PREPARING, label: 'Preparing', description: 'Chef is preparing your food', icon: <ChefHat className="w-6 h-6" /> },
+  { key: OrderStatus.READY, label: 'Ready', description: 'Your order is ready for pickup', icon: <UtensilsCrossed className="w-6 h-6" /> },
+  { key: OrderStatus.COMPLETED, label: 'Completed', description: 'Order picked up', icon: <Package className="w-6 h-6" /> },
 ];
 
 function StatusTimeline({ currentStatus, estimatedTime }: { currentStatus: string; estimatedTime?: number }) {
@@ -61,7 +60,7 @@ function StatusTimeline({ currentStatus, estimatedTime }: { currentStatus: strin
     <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Order Status</h2>
-        {estimatedTime && currentStatus !== 'COMPLETED' && currentStatus !== 'READY' && (
+        {estimatedTime && currentStatus !== OrderStatus.COMPLETED && currentStatus !== OrderStatus.READY && (
           <div className="flex items-center gap-2 text-orange-600">
             <Clock className="w-5 h-5" />
             <span className="font-medium">ETA: {estimatedTime} mins</span>
