@@ -62,6 +62,7 @@ COPY packages ./packages
 COPY apps/backend ./apps/backend
 
 RUN npm install -g pnpm@9 && \
+    npm install -g ts-node@10.9.2 @types/node@22 @types/bcrypt && \
     pnpm install --frozen-lockfile --prod && \
     cd packages/db && pnpm exec prisma generate
 
