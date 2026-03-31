@@ -16,75 +16,273 @@ A full-stack restaurant ordering platform with real-time order tracking.
 ```
 restaurant-ordering/
 ├── apps/
-│   ├── backend/          # NestJS API (Controllers → Services → Repositories)
-│   ├── customer/        # Next.js Customer App (Port 3001)
-│   └── admin/           # Next.js Admin Dashboard (Port 3002)
+│   ├── backend/          # NestJS API (Port 3000)
+│   │   └── Dockerfile    # Multi-stage Docker build
+│   ├── customer/         # Next.js Customer App (Port 3001)
+│   │   └── Dockerfile    # Multi-stage Docker build
+│   └── admin/            # Next.js Admin Dashboard (Port 3002)
+│       └── Dockerfile    # Multi-stage Docker build
 ├── packages/
-│   ├── config/          # ESLint, Prettier configs
-│   ├── db/             # Prisma schema & seed data
-│   └── types/          # Shared TypeScript types
-├── docker-compose.yml    # PostgreSQL, Redis, MinIO
-└── turbo.json          # Turborepo config
+│   ├── db/              # Prisma schema & seed data
+│   └── types/            # Shared TypeScript types
+├── docker-compose.yml            # Development Docker setup
+├── docker-compose.prod.yml      # Production Docker setup
+└── Makefile                      # Docker convenience commands
 ```
 
-## Getting Started
+## Prerequisites
 
-### 1. Start Infrastructure
+| Tool | Version | Install |
+|------|---------|---------|
+| Docker Desktop | 4.0+ | [docker.com/get-started](https://www.docker.com/get-started/) |
+| pnpm | 9+ | `npm install -g pnpm@9` |
+
+## First-Time Setup
+
+### 1. Clone and Configure
 
 ```bash
-docker-compose up -d
+git clone https://github.com/HomendraPatil/restaurant-ordering
+cd restaurant-ordering
 ```
 
-### 2. Install Dependencies
+### 2. Start Services with Database Setup
+
+**Using pnpm (recommended - works on all platforms):**
 
 ```bash
-pnpm install
+# For development (with hot-reload)
+pnpm docker:setup:dev
+
+# For production (optimized builds)
+pnpm docker:setup
 ```
 
-### 3. Set Up Environment
+**Using Make (Linux/macOS only):**
 
 ```bash
-cp .env.example .env
+# For development
+make setup-dev
+
+# For production
+make setup
 ```
 
-Edit `.env` with your configuration (see Environment Variables section below).
-
-### 4. Generate Prisma Client
+**Or using Docker Compose directly:**
 
 ```bash
-pnpm db:generate
+# Development
+docker-compose build && docker-compose up -d && sleep 15 && docker exec restaurant-backend sh -c "cd /app/packages/db && pnpm exec prisma db push && pnpm exec prisma db seed"
+
+# Production
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build && docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d && sleep 15 && docker exec restaurant-backend sh -c "cd /app/packages/db && pnpm exec prisma db push && pnpm exec prisma db seed"
 ```
 
-### 5. Run Migrations
+### 3. Verify Setup
 
 ```bash
-pnpm db:migrate
+docker ps
 ```
 
-### 6. Seed Database
+Expected output:
+
+```
+CONTAINER ID   IMAGE                            PORTS
+...            restaurant-ordering-backend       0.0.0.0:3000->3000/tcp
+...            restaurant-ordering-customer      0.0.0.0:3001->3001/tcp
+...            restaurant-ordering-admin         0.0.0.0:3002->3002/tcp
+...            postgres:16-alpine                 0.0.0.0:5432->5432/tcp
+...            redis:7-alpine                   0.0.0.0:6379->6379/tcp
+...            minio/minio                      0.0.0.0:9000-9001->9000-9001/tcp
+```
+
+Check backend logs to confirm migrations and seeding completed:
 
 ```bash
-pnpm db:seed
+docker logs restaurant-backend
 ```
 
-### 7. Start Development
+Look for:
+- `✔ Applied all migrations`
+- `🌱 Database seeded successfully`
 
-```bash
-pnpm dev
-```
+## Quick Commands
+
+| Task | pnpm Command | Docker Compose Command | Make Command |
+|------|-------------|------------------------|--------------|
+| **First-time setup (dev)** | `pnpm docker:setup:dev` | `docker-compose build && docker-compose up -d && ...` | `make setup-dev` |
+| **First-time setup (prod)** | `pnpm docker:setup` | `docker-compose -f docker-compose.yml -f docker-compose.prod.yml build && ...` | `make setup` |
+| Start dev | `pnpm docker:start` | `docker-compose up -d` | `make docker-up` |
+| Start prod | `pnpm docker:start:prod` | `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | `make docker-prod-up` |
+| Stop | `pnpm docker:stop` | `docker-compose down` | `make docker-down` |
+| View logs | `pnpm docker:logs` | `docker-compose logs -f` | `make docker-logs` |
+| View backend logs | `pnpm docker:logs:backend` | `docker-compose logs -f restaurant-backend` | - |
+| Show containers | `pnpm docker:ps` | `docker-compose ps` | `make docker-ps` |
+| Reset database | `pnpm docker:db:reset` | `docker exec restaurant-backend sh -c "cd /app/packages/db && pnpm exec prisma db push && pnpm exec prisma db seed"` | `make docker-db-reset` |
+| Prisma Studio | `pnpm docker:db:studio` | `docker exec -it restaurant-backend sh -c "cd /app/packages/db && pnpm exec prisma studio"` | `make docker-db-studio` |
+| Clean everything | `pnpm docker:clean` | `docker-compose down -v --rmi local` | `make docker-clean` |
 
 ## Services
 
 | Service | URL |
 |---------|-----|
 | Customer App | http://localhost:3001 |
-| Admin App | http://localhost:3002 |
+| Admin Dashboard | http://localhost:3002 |
 | Backend API | http://localhost:3000/api/v1 |
-| API Docs | http://localhost:3000/docs |
-| Prisma Studio | npx prisma studio |
+| API Docs (Swagger) | http://localhost:3000/docs |
 | MinIO Console | http://localhost:9001 |
-| PostgreSQL | localhost:5432 |
-| Redis | localhost:6379 |
+
+## Docker Images & Containers
+
+### Images Built
+
+| Image | Description | Size |
+|-------|-------------|------|
+| `restaurant-ordering-backend` | NestJS API server | ~277MB |
+| `restaurant-ordering-customer` | Next.js customer app | ~1.15GB |
+| `restaurant-ordering-admin` | Next.js admin app | ~661MB |
+
+### Container Names
+
+| Container | Port | Description |
+|-----------|------|-------------|
+| `restaurant-postgres` | 5432 | PostgreSQL database |
+| `restaurant-redis` | 6379 | Redis cache |
+| `restaurant-minio` | 9000, 9001 | S3-compatible storage |
+| `restaurant-backend` | 3000 | NestJS API |
+| `restaurant-customer` | 3001 | Customer Next.js app |
+| `restaurant-admin` | 3002 | Admin Next.js app |
+
+## pnpm Docker Scripts
+
+> Works on Windows, macOS, and Linux - no Make required.
+
+```bash
+# Setup (full automation)
+pnpm docker:setup:dev    # First-time setup for development
+pnpm docker:setup        # First-time setup for production
+
+# Start/Stop
+pnpm docker:start        # Start containers (no build)
+pnpm docker:start:prod   # Start production containers
+pnpm docker:stop         # Stop containers
+pnpm docker:restart      # Restart containers
+pnpm docker:clean        # Remove everything (volumes + images)
+
+# Logs & Status
+pnpm docker:logs         # View all logs
+pnpm docker:logs:backend # View backend logs only
+pnpm docker:ps           # Show running containers
+
+# Database
+pnpm docker:db:push      # Push Prisma schema
+pnpm docker:db:seed       # Seed database
+pnpm docker:db:reset      # Reset database (push + seed)
+pnpm docker:db:studio     # Open Prisma Studio
+```
+
+## Make Commands
+
+> For Linux and macOS only.
+
+```bash
+# General
+make help              # Show all available commands
+make setup             # First-time setup (build + start + migrate + seed) - PRODUCTION
+make setup-dev         # First-time setup (build + start + migrate + seed) - DEVELOPMENT
+
+# Development
+make docker-build          # Build all Docker images for development
+make docker-up            # Start all services for development
+make docker-down          # Stop all services
+make docker-logs          # Show logs from all services
+make docker-restart       # Restart all services
+make docker-clean         # Clean up Docker resources (volumes, containers, images)
+
+# Production
+make docker-prod-build    # Build all Docker images for production
+make docker-prod-up       # Start all services for production
+make docker-prod-down     # Stop all production services
+make docker-prod-logs     # Show logs from production services
+make docker-prod-restart  # Restart all production services
+
+# Database
+make docker-db-migrate    # Push schema to database
+make docker-db-push      # Push schema to database (same as migrate)
+make docker-db-seed       # Seed database with sample data
+make docker-db-reset      # Reset database and re-seed
+make docker-db-studio     # Open Prisma Studio
+
+# Utilities
+make docker-ps               # Show running containers
+make docker-shell-backend    # Open shell in backend container
+make docker-shell-customer   # Open shell in customer container
+make docker-shell-admin      # Open shell in admin container
+make docker-volumes          # List Docker volumes
+make docker-network-inspect  # Inspect the Docker network
+```
+
+## Windows Support
+
+Make commands don't work natively on Windows. Use Docker Compose commands directly:
+
+```bash
+# Development
+docker-compose up -d
+docker-compose logs -f
+docker-compose down
+
+# Production
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Rebuild without cache
+docker-compose build --no-cache && docker-compose up -d
+
+# Clean start
+docker-compose down -v && docker-compose up -d
+
+# View logs
+docker-compose logs -f restaurant-backend
+docker-compose logs -f restaurant-customer
+docker-compose logs -f restaurant-admin
+```
+
+### Install Make on Windows (Optional)
+
+If you prefer Make commands:
+- **Chocolatey**: `choco install make`
+- **Scoop**: `scoop install make`
+- **WSL**: Use Windows Subsystem for Linux
+- **Git Bash**: Make comes with Git for Windows
+
+## Database Commands
+
+```bash
+# Push schema to database (creates/updates tables)
+make docker-db-migrate
+
+# Seed database with sample data
+make docker-db-seed
+
+# Reset database (delete all data and re-seed)
+make docker-db-reset
+
+# Open Prisma Studio
+make docker-db-studio
+```
+
+### Windows Database Commands
+
+```bash
+# Push schema
+docker exec restaurant-backend sh -c "cd /app/packages/db && pnpm exec prisma db push"
+
+# Seed database
+docker exec restaurant-backend sh -c "cd /app/packages/db && pnpm exec prisma db seed"
+
+# Reset database
+docker exec restaurant-backend sh -c "cd /app/packages/db && pnpm exec prisma db push && pnpm exec prisma db seed"
+```
 
 ## Test Credentials
 
@@ -93,38 +291,26 @@ pnpm dev
 
 ## Environment Variables
 
-### Backend (.env)
-
 ```env
 # Database
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/restaurant?schema=public"
-
-# JWT
-JWT_ACCESS_SECRET="your-access-secret-key"
-JWT_ACCESS_EXPIRY="7d"
-JWT_REFRESH_SECRET="your-refresh-secret-key"
-JWT_REFRESH_EXPIRY="30d"
-
-# Razorpay (Payment)
-RAZORPAY_KEY_ID="your-razorpay-key-id"
-RAZORPAY_KEY_SECRET="your-razorpay-key-secret"
-
-# MinIO (File Storage)
-MINIO_ENDPOINT="localhost"
-MINIO_PORT=9000
-MINIO_ACCESS_KEY="minioadmin"
-MINIO_SECRET_KEY="minioadmin"
-MINIO_BUCKET="restaurant"
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/restaurant
 
 # Redis
-REDIS_HOST="localhost"
-REDIS_PORT=6379
-```
+REDIS_URL=redis://redis:6379
 
-### Customer App (.env.local)
+# JWT
+JWT_ACCESS_SECRET=your-access-secret
+JWT_REFRESH_SECRET=your-refresh-secret
 
-```env
-NEXT_PUBLIC_API_URL="http://localhost:3000/api/v1"
+# S3/MinIO
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_BUCKET=restaurant-images
+
+# URLs
+CUSTOMER_APP_URL=http://localhost:3001
+ADMIN_APP_URL=http://localhost:3002
 ```
 
 ## API Endpoints
@@ -221,69 +407,54 @@ Controllers → Services → Repositories → Prisma
 - Pending order timeout (15 minutes)
 - Price change detection with user confirmation
 
-## Database Schema
+## Troubleshooting
 
-### Core Entities
-- **User**: Customers and admins
-- **Address**: Delivery addresses
-- **Category**: Food categories
-- **MenuItem**: Menu items with customizations
-- **CartItem**: Shopping cart items
-- **Order**: Customer orders
-- **OrderItem**: Individual items in orders
-- **Payment**: Payment records
-- **OrderStatusHistory**: Order status change log
-
-## Development Commands
+### Ports Already in Use
 
 ```bash
-# Build all packages
-pnpm build
-
-# Start all services
-pnpm dev
-
-# Run tests
-pnpm test
-
-# Run linter
-pnpm lint
-
-# TypeScript check
-pnpm typecheck
-
-# Database commands
-pnpm db:migrate      # Run migrations
-pnpm db:push         # Push schema to DB
-pnpm db:seed         # Seed database
-pnpm db:studio       # Open Prisma Studio
-pnpm db:generate     # Generate Prisma client
+lsof -i :3000
+lsof -i :3001
+lsof -i :5432
 ```
 
-## Slices
+### Container Won't Start
 
-1. **Foundation** - Monorepo, DB, Auth, Seed Data
-2. **Menu Browsing** - Categories, Items, Filters
-3. **Cart + Customizations** - Sizes, Add-ons, Merge
-4. **Order Placement** - Address, Order Creation
-5. **Payment** - Razorpay Integration
-6. **Real-time Tracking** - WebSockets
-7. **Admin Order Management**
-8. **Admin Menu Management**
-9. **Edge Cases** - Stock, Sessions, Stale Data
-10. **Documentation & Polish**
-
-## Production Build
-
-### Customer App
 ```bash
-pnpm --filter @restaurant/customer build
+docker logs restaurant-backend
+docker logs restaurant-customer
+docker logs restaurant-admin
 ```
 
-### Backend
+### Database Connection Issues
+
 ```bash
-pnpm --filter @restaurant/backend build
+docker-compose ps postgres
+docker-compose restart postgres
+docker-compose exec restaurant-backend npx prisma migrate deploy
 ```
+
+### Clean Start
+
+```bash
+docker-compose down -v
+docker-compose up -d
+docker-compose exec restaurant-backend npx prisma migrate deploy
+docker-compose exec restaurant-backend npx prisma db seed
+```
+
+## Production Deployment
+
+1. Update secrets in `.env`:
+   - `JWT_ACCESS_SECRET`
+   - `JWT_REFRESH_SECRET`
+   - `RAZORPAY_KEY_SECRET`
+
+2. Replace MinIO with AWS S3 or equivalent managed storage
+
+3. Deploy:
+   ```bash
+   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+   ```
 
 ## License
 

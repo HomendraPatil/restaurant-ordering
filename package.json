@@ -16,8 +16,20 @@
     "db:seed": "pnpm --filter @restaurant/db seed",
     "db:studio": "pnpm --filter @restaurant/db studio",
     "db:generate": "pnpm --filter @restaurant/db generate",
-    "docker:up": "docker-compose -f docker-compose.yml up -d",
-    "docker:down": "docker-compose -f docker-compose.yml down"
+    "docker:setup:dev": "docker-compose build && docker-compose up -d && sleep 15 && docker exec restaurant-backend sh -c \"cd /app/packages/db && pnpm exec prisma db push && pnpm exec prisma db seed\"",
+    "docker:setup": "docker-compose -f docker-compose.yml -f docker-compose.prod.yml build && docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d && sleep 15 && docker exec restaurant-backend sh -c \"cd /app/packages/db && pnpm exec prisma db push && pnpm exec prisma db seed\"",
+    "docker:start": "docker-compose up -d",
+    "docker:start:prod": "docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
+    "docker:stop": "docker-compose down",
+    "docker:restart": "docker-compose restart",
+    "docker:clean": "docker-compose down -v --rmi local",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:backend": "docker-compose logs -f restaurant-backend",
+    "docker:ps": "docker-compose ps",
+    "docker:db:push": "docker exec restaurant-backend sh -c \"cd /app/packages/db && pnpm exec prisma db push\"",
+    "docker:db:seed": "docker exec restaurant-backend sh -c \"cd /app/packages/db && pnpm exec prisma db seed\"",
+    "docker:db:reset": "docker exec restaurant-backend sh -c \"cd /app/packages/db && pnpm exec prisma db push && pnpm exec prisma db seed\"",
+    "docker:db:studio": "docker exec -it restaurant-backend sh -c \"cd /app/packages/db && pnpm exec prisma studio\""
   },
   "devDependencies": {
     "turbo": "^2.4.0",
