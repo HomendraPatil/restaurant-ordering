@@ -16,6 +16,7 @@ const s3Client = new S3Client({
 });
 
 const BUCKET_NAME = process.env.S3_BUCKET || 'restaurant-images';
+const S3_PUBLIC_URL = process.env.S3_PUBLIC_URL || 'http://localhost:9000';
 
 const CATEGORIES = [
   {
@@ -204,11 +205,12 @@ async function downloadAndUploadImage(imageUrl: string, key: string): Promise<st
       ACL: 'public-read',
     }));
 
-    const baseUrl = `${process.env.S3_ENDPOINT || 'http://localhost:9000'}/${BUCKET_NAME}`;
+    const baseUrl = `${S3_PUBLIC_URL}/${BUCKET_NAME}`;
     return `${baseUrl}/${key}`;
   } catch (error) {
     console.error(`Failed to upload image: ${imageUrl}`, error);
-    return imageUrl;
+    const baseUrl = `${S3_PUBLIC_URL}/${BUCKET_NAME}`;
+    return `${baseUrl}/${key}`;
   }
 }
 

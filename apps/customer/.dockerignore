@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+.next
+out
+build
+
+# Source files (not needed for production)
+src
+app
+components
+hooks
+lib
+store
+
+# Environment
+.env
+.env.*
+!.env*.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+
+# Logs
+logs
+*.log
+
+# Testing
+coverage
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+**/__tests__/**
+**/__mocks__/**
+
+# Next.js cache
+.next/cache
+
+# Misc
+.DS_Store
+*.tgz

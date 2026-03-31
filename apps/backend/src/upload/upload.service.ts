@@ -14,12 +14,14 @@ interface MulterFile {
 export class UploadService implements OnModuleInit {
   private minioClient: Client;
   private bucket: string;
+  private publicUrl: string;
 
   constructor(private configService: ConfigService) {
     const endpoint = this.configService.get<string>('S3_ENDPOINT') || 'http://localhost:9000';
     const accessKey = this.configService.get<string>('S3_ACCESS_KEY') || 'minioadmin';
     const secretKey = this.configService.get<string>('S3_SECRET_KEY') || 'minioadmin';
     this.bucket = this.configService.get<string>('S3_BUCKET') || 'restaurant-images';
+    this.publicUrl = this.configService.get<string>('S3_PUBLIC_URL') || endpoint;
 
     const url = new URL(endpoint);
     const useSSL = url.protocol === 'https:';
@@ -56,8 +58,7 @@ export class UploadService implements OnModuleInit {
       'Content-Type': file.mimetype,
     });
 
-    const endpoint = this.configService.get<string>('S3_ENDPOINT') || 'http://localhost:9000';
-    const fileUrl = `${endpoint}/${this.bucket}/${key}`;
+    const fileUrl = `${this.publicUrl}/${this.bucket}/${key}`;
 
     return { fileUrl };
   }
@@ -66,15 +67,13 @@ export class UploadService implements OnModuleInit {
     uploadUrl: string;
     fileUrl: string;
   }> {
-    const endpoint = this.configService.get<string>('S3_ENDPOINT') || 'http://localhost:9000';
-
     const timestamp = Date.now();
     const randomString = crypto.randomBytes(8).toString('hex');
     const extension = fileName.split('.').pop() || 'jpg';
     const prefix = type === 'category' ? 'categories' : 'menu-items';
     const key = `${prefix}/${timestamp}-${randomString}.${extension}`;
 
-    const fileUrl = `${endpoint}/${this.bucket}/${key}`;
+    const fileUrl = `${this.publicUrl}/${this.bucket}/${key}`;
     const uploadUrl = await this.minioClient.presignedPutObject(this.bucket, key, 3600);
 
     return {
